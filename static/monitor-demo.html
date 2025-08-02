@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAON - Sistema de Monitoramento 24/7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                🛡️ IAON LifeMonitor
+            </h1>
+            <p class="text-xl text-gray-600">Sistema de Monitoramento de Vida 24/7</p>
+            <p class="text-sm text-gray-500 mt-2">Prevenção de suicídio com tecnologia avançada</p>
+        </div>
+
+        <!-- Status Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Status do Sistema -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Status do Sistema</h3>
+                    <div id="system-status" class="w-4 h-4 bg-green-500 rounded-full pulse-animation"></div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Monitoramento:</span>
+                        <span id="monitoring-status" class="font-medium text-green-600">✅ Ativo</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Nível de Risco:</span>
+                        <span id="risk-level" class="font-medium text-green-600">Baixo</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Último Heartbeat:</span>
+                        <span id="last-heartbeat" class="text-sm text-gray-500">Agora</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informações da Bateria -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Bateria</h3>
+                    <i data-lucide="battery" class="w-6 h-6 text-gray-600"></i>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Nível:</span>
+                        <span id="battery-percentage" class="font-medium">---%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div id="battery-bar" class="bg-green-500 h-3 rounded-full transition-all duration-500"
+                            style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Status:</span>
+                        <span id="charging-status" class="text-sm">Detectando...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Atividade do Usuário -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Atividade</h3>
+                    <i data-lucide="activity" class="w-6 h-6 text-gray-600"></i>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Última Interação:</span>
+                        <span id="last-activity" class="text-sm text-gray-500">Detectando...</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Eventos Hoje:</span>
+                        <span id="activity-count" class="font-medium">0</span>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        <span id="activity-log">Iniciando monitoramento...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controles de Demonstração -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">🎛️ Controles de Demonstração</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <button onclick="simulateRiskChange('baixo')"
+                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    Risco Baixo
+                </button>
+                <button onclick="simulateRiskChange('medio')"
+                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    Risco Médio
+                </button>
+                <button onclick="simulateRiskChange('alto')"
+                    class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    Risco Alto
+                </button>
+                <button onclick="simulateRiskChange('critico')"
+                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    🚨 Risco Crítico
+                </button>
+            </div>
+        </div>
+
+        <!-- Log de Eventos -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Log de Eventos</h3>
+            <div id="event-log" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-sm text-gray-500 italic">Aguardando eventos...</div>
+            </div>
+        </div>
+
+        <!-- Informações Técnicas -->
+        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-800 mb-3">ℹ️ Características Técnicas</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+                <div>
+                    <h4 class="font-semibold mb-2">🔋 Otimização de Bateria:</h4>
+                    <ul class="space-y-1">
+                        <li>• Frequência adaptativa baseada no risco</li>
+                        <li>• Modo economia automático em bateria baixa</li>
+                        <li>• Background processing inteligente</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">🌐 Compatibilidade:</h4>
+                    <ul class="space-y-1">
+                        <li>• ✅ Android (PWA + Service Worker)</li>
+                        <li>• ✅ iOS (PWA + Safari)</li>
+                        <li>• ✅ Windows, macOS, Linux</li>
+                        <li>• ✅ Funcionamento offline</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activityCount = 0;
+        let riskLevel = 'baixo';
+        let monitoringActive = false;
+
+        // Simular sistema de monitoramento
+        function initializeMonitoring() {
+            console.log('🛡️ Inicializando sistema de monitoramento...');
+
+            // Registrar Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(() => {
+                        console.log('✅ Service Worker registrado');
+                        monitoringActive = true;
+                        updateMonitoringStatus();
+                    })
+                    .catch(err => console.error('❌ Erro no Service Worker:', err));
+            }
+
+            // Monitorar bateria
+            initializeBatteryMonitoring();
+
+            // Rastrear atividade
+            trackUserActivity();
+
+            // Atualizar interface periodicamente
+            setInterval(updateInterface, 1000);
+
+            logEvent('Sistema de monitoramento iniciado', 'success');
+        }
+
+        function initializeBatteryMonitoring() {
+            if ('getBattery' in navigator) {
+                navigator.getBattery().then(battery => {
+                    updateBatteryDisplay(battery.level, battery.charging);
+
+                    battery.addEventListener('levelchange', () => {
+                        updateBatteryDisplay(battery.level, battery.charging);
+                    });
+
+                    battery.addEventListener('chargingchange', () => {
+                        updateBatteryDisplay(battery.level, battery.charging);
+                    });
+                });
+            } else {
+                document.getElementById('battery-percentage').textContent = 'N/A';
+                document.getElementById('charging-status').textContent = 'API não disponível';
+            }
+        }
+
+        function updateBatteryDisplay(level, charging) {
+            const percentage = Math.round(level * 100);
+            document.getElementById('battery-percentage').textContent = `${percentage}%`;
+            document.getElementById('battery-bar').style.width = `${percentage}%`;
+
+            // Alterar cor baseado no nível
+            const batteryBar = document.getElementById('battery-bar');
+            if (percentage < 15) {
+                batteryBar.className = 'bg-red-500 h-3 rounded-full transition-all duration-500';
+            } else if (percentage < 30) {
+                batteryBar.className = 'bg-yellow-500 h-3 rounded-full transition-all duration-500';
+            } else {
+                batteryBar.className = 'bg-green-500 h-3 rounded-full transition-all duration-500';
+            }
+
+            document.getElementById('charging-status').textContent = charging ? '🔌 Carregando' : '🔋 Bateria';
+        }
+
+        function trackUserActivity() {
+            const events = ['click', 'scroll', 'keypress', 'touchstart', 'mousemove'];
+
+            events.forEach(eventType => {
+                document.addEventListener(eventType, () => {
+                    activityCount++;
+                    document.getElementById('last-activity').textContent = 'Agora';
+                    document.getElementById('activity-count').textContent = activityCount;
+
+                    if (activityCount % 10 === 0) {
+                        logEvent(`${activityCount} interações registradas`, 'info');
+                    }
+                }, { passive: true });
+            });
+        }
+
+        function simulateRiskChange(newRisk) {
+            riskLevel = newRisk;
+
+            const colors = {
+                'baixo': { text: 'text-green-600', bg: 'bg-green-500' },
+                'medio': { text: 'text-yellow-600', bg: 'bg-yellow-500' },
+                'alto': { text: 'text-orange-600', bg: 'bg-orange-500' },
+                'critico': { text: 'text-red-600', bg: 'bg-red-500' }
+            };
+
+            const color = colors[newRisk];
+            const riskElement = document.getElementById('risk-level');
+            const statusElement = document.getElementById('system-status');
+
+            riskElement.textContent = newRisk.charAt(0).toUpperCase() + newRisk.slice(1);
+            riskElement.className = `font-medium ${color.text}`;
+            statusElement.className = `w-4 h-4 ${color.bg} rounded-full pulse-animation`;
+
+            logEvent(`Nível de risco alterado para: ${newRisk}`, newRisk === 'critico' ? 'error' : 'warning');
+
+            if (newRisk === 'critico') {
+                showEmergencyAlert();
+            }
+        }
+
+        function showEmergencyAlert() {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'fixed top-0 left-0 w-full h-full bg-red-600 text-white z-50 flex items-center justify-center';
+            alertDiv.innerHTML = `
+                <div class="text-center p-8">
+                    <h1 class="text-4xl font-bold mb-4">🚨 ALERTA DE EMERGÊNCIA</h1>
+                    <p class="text-xl mb-8">Sistema detectou risco crítico</p>
+                    <div class="space-x-4">
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                class="bg-white text-red-600 px-6 py-3 rounded-lg font-bold">
+                            Estou bem
+                        </button>
+                        <button onclick="logEvent('Usuário solicitou ajuda', 'error'); this.parentElement.parentElement.parentElement.remove();" 
+                                class="bg-yellow-400 text-red-600 px-6 py-3 rounded-lg font-bold">
+                            Preciso de ajuda
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                if (document.body.contains(alertDiv)) {
+                    alertDiv.remove();
+                    logEvent('Alerta de emergência expirou sem resposta', 'error');
+                }
+            }, 10000);
+        }
+
+        function updateInterface() {
+            // Atualizar timestamp do heartbeat
+            document.getElementById('last-heartbeat').textContent = 'Agora';
+
+            // Atualizar status do monitoramento
+            const status = monitoringActive ? '✅ Ativo' : '❌ Inativo';
+            document.getElementById('monitoring-status').textContent = status;
+        }
+
+        function updateMonitoringStatus() {
+            document.getElementById('monitoring-status').textContent = '✅ Ativo';
+            document.getElementById('system-status').className = 'w-4 h-4 bg-green-500 rounded-full pulse-animation';
+        }
+
+        function logEvent(message, type = 'info') {
+            const eventLog = document.getElementById('event-log');
+            const timestamp = new Date().toLocaleTimeString();
+
+            const colors = {
+                'info': 'text-blue-600',
+                'success': 'text-green-600',
+                'warning': 'text-yellow-600',
+                'error': 'text-red-600'
+            };
+
+            const icons = {
+                'info': 'ℹ️',
+                'success': '✅',
+                'warning': '⚠️',
+                'error': '🚨'
+            };
+
+            const eventDiv = document.createElement('div');
+            eventDiv.className = `text-sm ${colors[type]}`;
+            eventDiv.innerHTML = `
+                <span class="text-gray-500">${timestamp}</span> 
+                ${icons[type]} ${message}
+            `;
+
+            eventLog.appendChild(eventDiv);
+            eventLog.scrollTop = eventLog.scrollHeight;
+
+            // Limitar a 50 eventos
+            while (eventLog.children.length > 50) {
+                eventLog.removeChild(eventLog.firstChild);
+            }
+        }
+
+        // Inicializar quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initializeMonitoring();
+        });
+    </script>
+</body>
+
+</html>

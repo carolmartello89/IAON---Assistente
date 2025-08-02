@@ -28,6 +28,7 @@ class IAON {
         this.setupEventListeners();
         this.setupVoiceRecognition();
         this.registerServiceWorker();
+        this.setupLifeMonitoringIntegration();
 
         // Verificar status do onboarding
         await this.checkOnboardingStatus();
@@ -751,6 +752,443 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
             } catch (error) {
                 console.error('❌ Falha no registro do Service Worker:', error);
             }
+        }
+    }
+
+    setupLifeMonitoringIntegration() {
+        // Integração com o sistema de monitoramento de vida e segurança 24/7
+        console.log('🛡️ Configurando integração com LifeSecurityMonitor...');
+
+        // Rastrear atividade do usuário para o sistema de monitoramento
+        this.trackUserActivity();
+
+        // Configurar comunicação com Service Worker
+        this.setupServiceWorkerCommunication();
+
+        // Iniciar heartbeat de atividade
+        this.startActivityHeartbeat();
+
+        // Configurar monitoramento de bateria
+        this.setupBatteryMonitoring();
+
+        // Configurar triggers de pânico silencioso
+        this.setupSilentPanicTriggers();
+
+        // Atualizar status inicial
+        this.updateMonitoringStatus();
+    }
+
+    trackUserActivity() {
+        const events = ['click', 'scroll', 'keypress', 'touchstart', 'mousemove'];
+
+        events.forEach(eventType => {
+            document.addEventListener(eventType, () => {
+                this.notifyActivity(eventType);
+            }, { passive: true });
+        });
+
+        // Detectar mudanças de visibilidade da página
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.notifyActivity('page_hidden');
+            } else {
+                this.notifyActivity('page_visible');
+            }
+        });
+    }
+
+    notifyActivity(activityType) {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'UPDATE_ACTIVITY',
+                activity: activityType,
+                timestamp: Date.now()
+            });
+        }
+    }
+
+    setupServiceWorkerCommunication() {
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                this.handleServiceWorkerMessage(event.data);
+            });
+        }
+    }
+
+    handleServiceWorkerMessage(data) {
+        switch (data.type) {
+            case 'EMERGENCY_ALERT':
+                this.showEmergencyAlert(data.message);
+                break;
+            case 'RISK_LEVEL_CHANGED':
+                this.updateRiskDisplay(data.level);
+                break;
+            case 'BATTERY_WARNING':
+                this.showBatteryWarning(data.level);
+                break;
+        }
+    }
+
+    showEmergencyAlert(message) {
+        // Exibir alerta de emergência crítico
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'fixed top-0 left-0 w-full h-full bg-red-600 text-white z-50 flex items-center justify-center';
+        alertDiv.innerHTML = `
+            <div class="text-center p-8">
+                <h1 class="text-4xl font-bold mb-4">🚨 ALERTA DE EMERGÊNCIA</h1>
+                <p class="text-xl mb-8">${message}</p>
+                <div class="space-x-4">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                            class="bg-white text-red-600 px-6 py-3 rounded-lg font-bold">
+                        Estou bem
+                    </button>
+                    <button onclick="window.location.href='/emergency'" 
+                            class="bg-yellow-400 text-red-600 px-6 py-3 rounded-lg font-bold">
+                        Preciso de ajuda
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(alertDiv);
+
+        // Auto-remove após 30 segundos se não houver resposta
+        setTimeout(() => {
+            if (document.body.contains(alertDiv)) {
+                alertDiv.remove();
+            }
+        }, 30000);
+    }
+
+    updateRiskDisplay(level) {
+        // Atualizar indicador visual do nível de risco
+        const colors = {
+            'baixo': 'green',
+            'medio': 'yellow',
+            'alto': 'orange',
+            'critico': 'red'
+        };
+
+        const statusIndicator = document.getElementById('risk-status-indicator');
+        if (statusIndicator) {
+            statusIndicator.style.backgroundColor = colors[level] || 'gray';
+            statusIndicator.title = `Nível de risco: ${level}`;
+        }
+    }
+
+    showBatteryWarning(level) {
+        if (level < 0.15) {
+            this.addMessageToChat('🔋 Bateria baixa detectada. Sistema otimizado para economia de energia.', 'ai');
+        }
+    }
+
+    startActivityHeartbeat() {
+        // Enviar heartbeat de atividade a cada minuto
+        setInterval(() => {
+            this.notifyActivity('heartbeat');
+        }, 60000);
+    }
+
+    async getMonitoringStatus() {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            return new Promise((resolve) => {
+                const channel = new MessageChannel();
+
+                channel.port1.onmessage = (event) => {
+                    resolve(event.data);
+                };
+
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'GET_STATUS'
+                }, [channel.port2]);
+            });
+        }
+
+        return { isActive: false, riskLevel: 'desconhecido' };
+    }
+
+    async setupBatteryMonitoring() {
+        try {
+            if ('getBattery' in navigator) {
+                const battery = await navigator.getBattery();
+
+                // Atualizar indicador inicial
+                this.updateBatteryDisplay(battery.level, battery.charging);
+
+                // Monitorar mudanças
+                battery.addEventListener('levelchange', () => {
+                    this.updateBatteryDisplay(battery.level, battery.charging);
+                });
+
+                battery.addEventListener('chargingchange', () => {
+                    this.updateBatteryDisplay(battery.level, battery.charging);
+                });
+            }
+        } catch (error) {
+            console.log('⚠️ API de bateria não disponível');
+        }
+    }
+
+    updateBatteryDisplay(level, charging) {
+        const batteryLevel = document.getElementById('battery-level');
+        const batteryIndicator = document.getElementById('battery-indicator');
+
+        if (batteryLevel && batteryIndicator) {
+            const percentage = Math.round(level * 100);
+            batteryLevel.textContent = `${percentage}%`;
+
+            // Alterar cor baseado no nível
+            let colorClass = 'text-green-600';
+            if (percentage < 15) {
+                colorClass = 'text-red-600';
+            } else if (percentage < 30) {
+                colorClass = 'text-yellow-600';
+            }
+
+            batteryLevel.className = `text-xs ${colorClass}`;
+
+            // Adicionar indicador de carregamento
+            const icon = batteryIndicator.querySelector('[data-lucide="battery"]');
+            if (charging && icon) {
+                icon.classList.add('text-green-600');
+            } else if (icon) {
+                icon.classList.remove('text-green-600');
+            }
+        }
+    }
+
+    async updateMonitoringStatus() {
+        try {
+            const status = await this.getMonitoringStatus();
+            this.updateRiskDisplay(status.riskLevel);
+
+            console.log('🛡️ Status do LifeMonitor:', status);
+        } catch (error) {
+            console.error('❌ Erro ao obter status do monitoramento:', error);
+        }
+    }
+
+    setupSilentPanicTriggers() {
+        // Configurar triggers silenciosos para ativar modo sequestro
+        console.log('🔇 Configurando triggers de pânico silencioso...');
+
+        // Trigger 1: Pressionar Volume + Power múltiplas vezes
+        this.setupVolumeButtonTrigger();
+
+        // Trigger 2: Código de pânico em texto
+        this.setupTextPanicTrigger();
+
+        // Trigger 3: Palavra-chave de voz
+        this.setupVoicePanicTrigger();
+
+        // Trigger 4: Shake pattern específico
+        this.setupShakePanicTrigger();
+    }
+
+    setupVolumeButtonTrigger() {
+        let volumeClickCount = 0;
+        let volumeTimer = null;
+
+        document.addEventListener('keydown', (event) => {
+            // Detectar Volume Up (Android) ou F1 (simulação desktop)
+            if (event.key === 'F1' || event.key === 'AudioVolumeUp') {
+                event.preventDefault();
+                volumeClickCount++;
+
+                // Reset timer
+                if (volumeTimer) clearTimeout(volumeTimer);
+
+                // Se 5 cliques em 10 segundos = trigger de pânico
+                if (volumeClickCount >= 5) {
+                    this.activateSilentPanicMode('volume_button_sequence');
+                    volumeClickCount = 0;
+                    return;
+                }
+
+                // Reset após 10 segundos
+                volumeTimer = setTimeout(() => {
+                    volumeClickCount = 0;
+                }, 10000);
+            }
+        });
+    }
+
+    setupTextPanicTrigger() {
+        // Detectar códigos de pânico em inputs de texto
+        const panicCodes = ['911help', 'sos123', 'emergencia456', 'help999'];
+
+        document.addEventListener('input', (event) => {
+            const inputValue = event.target.value.toLowerCase().replace(/\s/g, '');
+
+            for (const code of panicCodes) {
+                if (inputValue.includes(code)) {
+                    // Limpar o texto para não deixar evidência
+                    event.target.value = event.target.value.replace(new RegExp(code, 'gi'), '');
+
+                    this.activateSilentPanicMode('text_panic_code');
+                    break;
+                }
+            }
+        });
+    }
+
+    setupVoicePanicTrigger() {
+        // Palavras-chave que ativam modo pânico silencioso
+        const panicPhrases = [
+            'codigo vermelho ativado',
+            'iniciar protocolo delta',
+            'sistema phoenix agora',
+            'ativar modo fantasma'
+        ];
+
+        // Integrar com reconhecimento de voz se disponível
+        if (this.voiceRecognition) {
+            this.voiceRecognition.addEventListener('result', (event) => {
+                const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+
+                for (const phrase of panicPhrases) {
+                    if (transcript.includes(phrase)) {
+                        this.activateSilentPanicMode('voice_panic_phrase');
+                        break;
+                    }
+                }
+            });
+        }
+    }
+
+    setupShakePanicTrigger() {
+        // Detectar padrão específico de shake (3 shakes fortes seguidos)
+        let shakeCount = 0;
+        let lastShake = 0;
+
+        if ('DeviceMotionEvent' in window) {
+            window.addEventListener('devicemotion', (event) => {
+                const acceleration = event.acceleration;
+                if (!acceleration) return;
+
+                const magnitude = Math.sqrt(
+                    acceleration.x * acceleration.x +
+                    acceleration.y * acceleration.y +
+                    acceleration.z * acceleration.z
+                );
+
+                const now = Date.now();
+
+                // Detectar shake forte (magnitude > 20)
+                if (magnitude > 20 && now - lastShake > 500) {
+                    shakeCount++;
+                    lastShake = now;
+
+                    // 3 shakes em 5 segundos = trigger
+                    if (shakeCount >= 3) {
+                        this.activateSilentPanicMode('shake_pattern');
+                        shakeCount = 0;
+                    }
+
+                    // Reset após 5 segundos
+                    setTimeout(() => {
+                        if (shakeCount > 0) shakeCount--;
+                    }, 5000);
+                }
+            });
+        }
+    }
+
+    async activateSilentPanicMode(triggerType) {
+        console.log(`🚨 MODO PÂNICO SILENCIOSO ATIVADO - Trigger: ${triggerType}`);
+
+        try {
+            // Enviar comando silencioso para Service Worker
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'ACTIVATE_PANIC_MODE',
+                    trigger: triggerType,
+                    timestamp: Date.now()
+                });
+            }
+
+            // Mostrar indicação visual MUITO discreta (apenas um pixel vermelho)
+            this.showDiscreetPanicIndicator();
+
+            // Começar a coletar evidências adicionais
+            this.startEvidenceCollection();
+
+        } catch (error) {
+            console.error('❌ Erro ao ativar modo pânico:', error);
+        }
+    }
+
+    showDiscreetPanicIndicator() {
+        // Criar indicador extremamente discreto (1 pixel vermelho no canto)
+        const indicator = document.createElement('div');
+        indicator.id = 'silent-panic-indicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 1px;
+            background: red;
+            z-index: 9999;
+            opacity: 0.1;
+        `;
+
+        document.body.appendChild(indicator);
+
+        // Remover após 30 segundos para não deixar evidência
+        setTimeout(() => {
+            if (document.getElementById('silent-panic-indicator')) {
+                document.getElementById('silent-panic-indicator').remove();
+            }
+        }, 30000);
+    }
+
+    async startEvidenceCollection() {
+        try {
+            // Coletar informações do ambiente silenciosamente
+            const evidence = {
+                timestamp: Date.now(),
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                screen: {
+                    width: screen.width,
+                    height: screen.height
+                },
+                battery: await this.getBatteryInfo(),
+                connection: navigator.connection ? {
+                    effectiveType: navigator.connection.effectiveType,
+                    downlink: navigator.connection.downlink
+                } : null
+            };
+
+            // Enviar evidências para Service Worker processar
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'COLLECT_EVIDENCE',
+                    evidence: evidence
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Erro na coleta de evidências:', error);
+        }
+    }
+
+    async getBatteryInfo() {
+        try {
+            if ('getBattery' in navigator) {
+                const battery = await navigator.getBattery();
+                return {
+                    level: battery.level,
+                    charging: battery.charging,
+                    chargingTime: battery.chargingTime,
+                    dischargingTime: battery.dischargingTime
+                };
+            }
+        } catch (error) {
+            return null;
         }
     }
 

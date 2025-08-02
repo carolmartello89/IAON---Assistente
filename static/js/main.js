@@ -20,27 +20,27 @@ class IAON {
             "IAON assistente, mostrar relatório financeiro",
             "Confirmo que sou o usuário do IAON"
         ];
-        
+
         this.init();
     }
-    
+
     async init() {
         this.setupEventListeners();
         this.setupVoiceRecognition();
         this.registerServiceWorker();
-        
+
         // Verificar status do onboarding
         await this.checkOnboardingStatus();
-    }    generateSessionId() {
+    } generateSessionId() {
         return 'iaon_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    
+
     async checkOnboardingStatus() {
         try {
             const response = await this.callAPI(`/api/onboarding/status?user_id=${this.userId}`);
             this.user = response.user;
             this.voiceBiometry = response.voice_biometry;
-            
+
             if (response.needs_onboarding) {
                 this.showOnboarding();
             } else {
@@ -54,86 +54,86 @@ class IAON {
             this.checkSystemHealth();
         }
     }
-    
+
     showOnboarding() {
         document.getElementById('onboarding-modal').classList.remove('hidden');
         this.onboardingStep = 1;
         this.showOnboardingStep(1);
     }
-    
+
     hideOnboarding() {
         document.getElementById('onboarding-modal').classList.add('hidden');
     }
-    
+
     showOnboardingStep(step) {
         // Esconder todos os passos
         document.querySelectorAll('.onboarding-step').forEach(el => el.classList.add('hidden'));
-        
+
         // Mostrar passo atual
         document.getElementById(`onboarding-step-${step}`).classList.remove('hidden');
         this.onboardingStep = step;
     }
-    
+
     nextOnboardingStep() {
         if (this.onboardingStep === 1) {
             const preferredName = document.getElementById('preferred-name').value.trim();
             const fullName = document.getElementById('full-name').value.trim();
-            
+
             if (!preferredName) {
                 alert('Por favor, digite como gostaria de ser chamado.');
                 return;
             }
-            
+
             this.user = {
                 ...this.user,
                 preferred_name: preferredName,
                 full_name: fullName || preferredName
             };
-            
+
             this.showOnboardingStep(2);
         }
     }
-    
+
     previousOnboardingStep() {
         if (this.onboardingStep > 1) {
             this.showOnboardingStep(this.onboardingStep - 1);
         }
     }
-    
+
     async startAdvancedVoiceEnrollment() {
         if (!this.voiceRecognition) {
             alert('❌ Reconhecimento de voz não suportado neste navegador.');
             return;
         }
-        
+
         this.voiceEnrollmentActive = true;
         this.enrollmentSamples = 0;
-        
+
         document.getElementById('voice-enrollment-progress').classList.remove('hidden');
         document.getElementById('start-voice-enrollment').disabled = true;
         document.getElementById('start-voice-enrollment').textContent = '🎤 Gravando...';
-        
+
         this.collectVoiceSample();
     }
-    
+
     async collectVoiceSample() {
         if (this.enrollmentSamples >= 5) {
             this.completeVoiceEnrollment();
             return;
         }
-        
+
         const phrase = this.enrollmentPhrases[this.enrollmentSamples];
-        
+
         // Mostrar frase para o usuário
         this.addMessageToChat(`🎤 **Amostra ${this.enrollmentSamples + 1}/5** - Repita: "${phrase}"`, 'ai');
-        
+
         try {
             // Simular coleta de amostra de voz
             await this.recordVoiceSample(phrase);
-            
+
             this.enrollmentSamples++;
             this.updateEnrollmentProgress();
-            
+
             if (this.enrollmentSamples < 5) {
                 setTimeout(() => this.collectVoiceSample(), 2000);
             } else {
@@ -144,12 +144,12 @@ class IAON {
             this.addMessageToChat('❌ Erro ao coletar amostra de voz. Tente novamente.', 'ai');
         }
     }
-    
+
     async recordVoiceSample(phrase) {
         return new Promise((resolve, reject) => {
             // Simular gravação (em produção, usar MediaRecorder real)
             const audioData = this.generateMockAudioData();
-            
+
             setTimeout(async () => {
                 try {
                     const response = await this.callAPI('/api/voice-biometry/advanced-enroll', {
@@ -164,7 +164,7 @@ class IAON {
                             speech_rate: 1.0
                         })
                     });
-                    
+
                     this.addMessageToChat(`✅ ${response.message}`, 'ai');
                     resolve(response);
                 } catch (error) {
@@ -173,39 +173,39 @@ class IAON {
             }, 3000); // Simular 3 segundos de gravação
         });
     }
-    
+
     generateMockAudioData() {
         // Simular dados de áudio em base64
         const mockData = btoa(Math.random().toString() + Date.now().toString());
         return mockData;
     }
-    
+
     updateEnrollmentProgress() {
         const progress = (this.enrollmentSamples / 5) * 100;
         document.getElementById('progress-bar').style.width = `${progress}%`;
         document.getElementById('progress-text').textContent = `${this.enrollmentSamples} de 5 amostras coletadas`;
     }
-    
+
     async completeVoiceEnrollment() {
         this.voiceEnrollmentActive = false;
         document.getElementById('start-voice-enrollment').disabled = false;
         document.getElementById('start-voice-enrollment').textContent = '✅ Biometria Cadastrada!';
-        
+
         this.addMessageToChat('🎉 Biometria de voz cadastrada com sucesso! Agora você pode usar comandos de voz seguros.', 'ai');
-        
+
         setTimeout(() => {
             this.showOnboardingStep(3);
-            document.getElementById('welcome-message').textContent = 
+            document.getElementById('welcome-message').textContent =
                 `Olá, ${this.user.preferred_name}! Sua biometria de voz foi configurada com sucesso.`;
         }, 2000);
     }
-    
+
     skipVoiceEnrollment() {
         this.showOnboardingStep(3);
-        document.getElementById('welcome-message').textContent = 
+        document.getElementById('welcome-message').textContent =
             `Olá, ${this.user.preferred_name}! Você pode configurar a biometria de voz depois nas configurações.`;
     }
-    
+
     async completeOnboarding() {
         try {
             const response = await this.callAPI('/api/onboarding/complete', {
@@ -220,13 +220,13 @@ class IAON {
                     voice_enabled: this.voiceEnrollmentActive
                 })
             });
-            
+
             this.user = response.user;
             this.hideOnboarding();
             this.addMessageToChat(response.message, 'ai');
             this.addMessageToChat('🚀 Agora você pode explorar todas as funcionalidades do IAON! Digite "ajuda" para ver o que posso fazer.', 'ai');
             this.checkSystemHealth();
-            
+
         } catch (error) {
             console.error('Error completing onboarding:', error);
             this.addMessageToChat('❌ Erro ao completar configuração. Tente novamente.', 'ai');
@@ -449,13 +449,13 @@ class IAON {
             this.addMessageToChat('❌ Reconhecimento de voz não suportado neste navegador. Use Chrome, Edge ou Safari.', 'ai');
             return;
         }
-        
+
         // Verificar se o usuário tem biometria configurada
         if (this.user && !this.user.voice_enabled) {
             this.addMessageToChat('🔒 Configure sua biometria de voz primeiro para usar comandos seguros. Acesse as configurações.', 'ai');
             return;
         }
-        
+
         if (this.isVoiceActive) {
             this.voiceRecognition.stop();
             this.addMessageToChat('🔇 Reconhecimento de voz parado.', 'ai');
@@ -468,7 +468,7 @@ class IAON {
                 this.addMessageToChat('❌ Erro ao iniciar reconhecimento de voz. Verifique as permissões do microfone.', 'ai');
             }
         }
-    }    handleVoiceInput(transcript) {
+    } handleVoiceInput(transcript) {
         console.log('Voice input received:', transcript);
 
         // Mostrar o que foi reconhecido
@@ -519,27 +519,27 @@ class IAON {
 
     executeVoiceAction(intent, command) {
         console.log('Executing voice action:', intent);
-        
+
         switch (intent) {
             case 'agenda_management':
                 this.showSection('agenda');
                 this.addMessageToChat('📅 Abrindo seção de agenda inteligente...', 'ai');
                 break;
-                
+
             case 'medical_check':
                 this.showSection('medical');
                 this.addMessageToChat('🏥 Ativando sistema médico avançado...', 'ai');
                 break;
-                
+
             case 'financial_management':
                 this.showSection('finance');
                 this.addMessageToChat('💰 Carregando controle financeiro personalizado...', 'ai');
                 break;
-                
+
             case 'generate_report':
                 this.addMessageToChat('📊 Gerando relatório personalizado... (Em desenvolvimento)', 'ai');
                 break;
-                
+
             case 'show_help':
                 this.addMessageToChat(`🆘 **Central de Ajuda IAON**
 
@@ -556,24 +556,24 @@ Digite perguntas naturais sobre medicina, finanças, agenda ou qualquer tópico!
 **🔧 Configurações:**
 Acesse as configurações para personalizar sua experiência.`, 'ai');
                 break;
-                
+
             case 'settings_management':
                 this.addMessageToChat('⚙️ Abrindo configurações avançadas... (Em desenvolvimento)', 'ai');
                 break;
-                
+
             case 'voice_management':
                 this.addMessageToChat('🎤 Sistema de biometria de voz... (Use as configurações para reconfigurar)', 'ai');
                 break;
-                
+
             case 'general_command':
                 // Para comandos gerais, processar como chat normal
                 this.sendChatMessage(command);
                 break;
-                
+
             default:
                 this.addMessageToChat('🤖 Comando processado com sucesso!', 'ai');
         }
-    }    updateVoiceStatus(active, text) {
+    } updateVoiceStatus(active, text) {
         this.isVoiceActive = active;
 
         const indicator = document.getElementById('voice-indicator');
@@ -719,7 +719,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
         try {
             const response = await this.callAPI('/api/health');
             console.log('System health:', response);
-            
+
             if (this.user) {
                 const greeting = this.getTimeBasedGreeting();
                 this.addMessageToChat(`${greeting}, ${this.user.preferred_name || this.user.full_name}! 🚀`, 'ai');
@@ -729,7 +729,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
             console.error('Error checking system health:', error);
         }
     }
-    
+
     getTimeBasedGreeting() {
         const hour = new Date().getHours();
         if (hour < 12) return 'Bom dia';

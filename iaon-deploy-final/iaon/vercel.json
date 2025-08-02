@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "name": "iaon",
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/app.py"
+    }
+  ],
+  "env": {
+    "FLASK_ENV": "production",
+    "SECRET_KEY": "@secret_key"
+  },
+  "functions": {
+    "app.py": {
+      "maxDuration": 30
+    }
+  }
+}
+

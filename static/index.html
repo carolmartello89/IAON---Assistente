@@ -272,6 +272,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="#" data-section="meetings" class="nav-link flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50">
+                                <i data-lucide="video" class="w-5 h-5"></i>
+                                <span>Reuniões</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="#" data-section="finance" class="nav-link flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50">
                                 <i data-lucide="dollar-sign" class="w-5 h-5"></i>
                                 <span>Finanças</span>
@@ -449,6 +455,109 @@
                         </h2>
                         <div class="bg-white rounded-lg shadow-lg p-6">
                             <p class="text-gray-600 text-center">🚧 Sistema de agenda em desenvolvimento...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Meetings Section -->
+                <section id="meetings-section" class="section hidden p-6">
+                    <div class="max-w-6xl mx-auto">
+                        <h2 class="text-3xl font-bold mb-6 flex items-center">
+                            <i data-lucide="video" class="w-8 h-8 mr-3 text-purple-500"></i>
+                            Sistema de Reuniões Avançado
+                        </h2>
+                        
+                        <!-- Status da Reunião -->
+                        <div id="meeting-status-card" class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">Status da Reunião</h3>
+                                    <p id="meeting-status" class="text-gray-600">Nenhuma reunião ativa</p>
+                                </div>
+                                <div class="flex space-x-3">
+                                    <button onclick="iaon.startMeeting()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center">
+                                        <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                                        Nova Reunião
+                                    </button>
+                                    <button onclick="iaon.loadUserMeetings()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center">
+                                        <i data-lucide="list" class="w-4 h-4 mr-2"></i>
+                                        Histórico
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Controles de Reunião -->
+                        <div id="meeting-controls" class="hidden bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Controles da Reunião</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button id="start-recording" onclick="iaon.startMeetingRecording()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center">
+                                    <i data-lucide="mic" class="w-4 h-4 mr-2"></i>
+                                    Gravar
+                                </button>
+                                <button id="stop-recording" onclick="iaon.stopMeetingRecording()" class="hidden bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition-colors flex items-center justify-center">
+                                    <i data-lucide="square" class="w-4 h-4 mr-2"></i>
+                                    Parar
+                                </button>
+                                <button onclick="iaon.addMeetingParticipant()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center">
+                                    <i data-lucide="user-plus" class="w-4 h-4 mr-2"></i>
+                                    Participante
+                                </button>
+                                <button onclick="iaon.generateMeetingAgenda()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center">
+                                    <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+                                    Gerar Pauta
+                                </button>
+                                <button onclick="iaon.endMeeting()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center">
+                                    <i data-lucide="x" class="w-4 h-4 mr-2"></i>
+                                    Finalizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Grid de Conteúdo -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Transcrição em Tempo Real -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                    <i data-lucide="message-square" class="w-5 h-5 mr-2 text-blue-500"></i>
+                                    Transcrição em Tempo Real
+                                </h3>
+                                <div id="transcript-container" class="h-64 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2">
+                                    <div class="text-gray-500 text-center text-sm">
+                                        📝 As transcrições aparecerão aqui automaticamente durante a gravação
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Participantes -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                    <i data-lucide="users" class="w-5 h-5 mr-2 text-green-500"></i>
+                                    Participantes
+                                </h3>
+                                <div id="participants-list" class="h-64 overflow-y-auto space-y-2">
+                                    <div class="text-gray-500 text-center text-sm">
+                                        👥 Adicione participantes para identificação automática
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pauta da Reunião -->
+                        <div class="mt-6">
+                            <div id="agenda-container" class="hidden">
+                                <!-- Conteúdo da pauta será inserido aqui -->
+                            </div>
+                        </div>
+
+                        <!-- Lista de Reuniões -->
+                        <div class="mt-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Reuniões Recentes</h3>
+                            <div id="meetings-list" class="space-y-3">
+                                <div class="text-gray-500 text-center text-sm py-8">
+                                    📋 Nenhuma reunião encontrada. Crie sua primeira reunião!
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>

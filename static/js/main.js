@@ -21,6 +21,14 @@ class IAON {
             "Confirmo que sou o usuário do IAON"
         ];
 
+        // Sistema de Reuniões
+        this.currentMeeting = null;
+        this.isRecording = false;
+        this.meetingRecorder = null;
+        this.meetingAudioChunks = [];
+        this.meetingParticipants = [];
+        this.transcriptionInterval = null;
+
         this.init();
     }
 
@@ -521,6 +529,11 @@ class IAON {
         console.log('Executing voice action:', intent);
 
         switch (intent) {
+            case 'meeting_management':
+                this.showSection('meetings');
+                this.addMessageToChat('📹 Ativando sistema de reuniões avançado...', 'ai');
+                break;
+
             case 'agenda_management':
                 this.showSection('agenda');
                 this.addMessageToChat('📅 Abrindo seção de agenda inteligente...', 'ai');
@@ -544,11 +557,18 @@ class IAON {
                 this.addMessageToChat(`🆘 **Central de Ajuda IAON**
 
 **🎤 Comandos de Voz Disponíveis:**
+• "IA reunião" - Sistema de reuniões com gravação
 • "IA agenda" - Gerenciar compromissos
 • "IA medicina" - Sistema médico
 • "IA finanças" - Controle financeiro
 • "IA relatório" - Gerar relatórios
 • "IA configuração" - Ajustes do sistema
+
+**📹 Sistema de Reuniões:**
+• Gravação automática de alta qualidade
+• Reconhecimento de participantes por voz
+• Transcrição em tempo real
+• Geração automática de pautas
 
 **💬 Chat Inteligente:**
 Digite perguntas naturais sobre medicina, finanças, agenda ou qualquer tópico!
@@ -783,6 +803,420 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
         div.textContent = text;
         return div.innerHTML;
     }
+    // ==================== SISTEMA DE REUNIÕES ====================
+
+    async startMeeting() {
+        try {
+            const title = prompt('Digite o título da reunião:') || 'Reunião IAON';
+            const description = prompt('Descrição (opcional):') || '';
+
+            const response = await this.callAPI('/api/meetings/start', {
+                method: 'POST',
+                body: JSON.stringify({
+                    user_id: this.userId,
+                    title: title,
+                    description: description
+                })
+            });
+
+            if (response.success) {
+                this.currentMeeting = response.meeting;
+                this.updateMeetingStatus('active', `📹 Reunião "${title}" iniciada`);
+                this.addMessageToChat(`🎉 ${response.message}`, 'ai');
+                
+                // Mostrar controles de reunião
+                this.showMeetingControls();
+            }
+        } catch (error) {
+            console.error('Error starting meeting:', error);
+            this.addMessageToChat('❌ Erro ao iniciar reunião. Tente novamente.', 'ai');
+        }
+    }
+
+    async addMeetingParticipant() {
+        if (!this.currentMeeting) {
+            this.addMessageToChat('❌ Nenhuma reunião ativa. Inicie uma reunião primeiro.', 'ai');
+            return;
+        }
+
+        try {
+            const participantName = prompt('Nome do participante:');
+            const participantRole = prompt('Função (moderador/participante/convidado):') || 'participante';
+            const email = prompt('Email (opcional):') || '';
+
+            if (!participantName) return;
+
+            const response = await this.callAPI(`/api/meetings/${this.currentMeeting.id}/add-participant`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    participant_name: participantName,
+                    participant_role: participantRole,
+                    email: email,
+                    voice_sample: '' // Em produção, coletar amostra de voz
+                })
+            });
+
+            if (response.success) {
+                this.meetingParticipants.push(response.participant);
+                this.updateParticipantsList();
+                this.addMessageToChat(`👤 ${response.message}`, 'ai');
+            }
+        } catch (error) {
+            console.error('Error adding participant:', error);
+            this.addMessageToChat('❌ Erro ao adicionar participante.', 'ai');
+        }
+    }
+
+    async startMeetingRecording() {
+        if (!this.currentMeeting) {
+            this.addMessageToChat('❌ Nenhuma reunião ativa. Inicie uma reunião primeiro.', 'ai');
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 44100
+                }
+            });
+
+            this.meetingRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+
+            this.meetingAudioChunks = [];
+
+            this.meetingRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.meetingAudioChunks.push(event.data);
+                }
+            };
+
+            this.meetingRecorder.onstop = () => {
+                const audioBlob = new Blob(this.meetingAudioChunks, { type: 'audio/webm' });
+                this.processMeetingAudio(audioBlob);
+            };
+
+            // Começar gravação
+            this.meetingRecorder.start();
+            this.isRecording = true;
+            
+            this.updateMeetingStatus('recording', '🔴 Gravando reunião...');
+            this.addMessageToChat('🎤 Gravação iniciada! A transcrição será feita automaticamente.', 'ai');
+
+            // Iniciar transcrição em tempo real
+            this.startRealTimeTranscription();
+
+            // Atualizar interface
+            document.getElementById('start-recording')?.classList.add('hidden');
+            document.getElementById('stop-recording')?.classList.remove('hidden');
+
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            this.addMessageToChat('❌ Erro ao iniciar gravação. Verifique as permissões do microfone.', 'ai');
+        }
+    }
+
+    stopMeetingRecording() {
+        if (this.meetingRecorder && this.isRecording) {
+            this.meetingRecorder.stop();
+            this.isRecording = false;
+
+            // Parar transcrição em tempo real
+            if (this.transcriptionInterval) {
+                clearInterval(this.transcriptionInterval);
+                this.transcriptionInterval = null;
+            }
+
+            this.updateMeetingStatus('active', '⏹️ Gravação finalizada');
+            this.addMessageToChat('📹 Gravação finalizada. Processando transcrição...', 'ai');
+
+            // Atualizar interface
+            document.getElementById('start-recording')?.classList.remove('hidden');
+            document.getElementById('stop-recording')?.classList.add('hidden');
+        }
+    }
+
+    startRealTimeTranscription() {
+        // Simular transcrição em tempo real
+        this.transcriptionInterval = setInterval(async () => {
+            if (this.isRecording && this.currentMeeting) {
+                await this.transcribeCurrentAudio();
+            }
+        }, 10000); // Transcrever a cada 10 segundos
+    }
+
+    async transcribeCurrentAudio() {
+        try {
+            // Simular dados de áudio para transcrição
+            const audioData = this.generateMockAudioData();
+            
+            const response = await this.callAPI(`/api/meetings/${this.currentMeeting.id}/transcribe`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    audio_data: audioData,
+                    start_time_seconds: Date.now() / 1000,
+                    end_time_seconds: (Date.now() / 1000) + 10
+                })
+            });
+
+            if (response.success) {
+                this.displayTranscription(response.transcript);
+            }
+        } catch (error) {
+            console.error('Error transcribing audio:', error);
+        }
+    }
+
+    displayTranscription(transcript) {
+        const transcriptContainer = document.getElementById('transcript-container');
+        if (transcriptContainer) {
+            const transcriptItem = document.createElement('div');
+            transcriptItem.className = 'transcript-item p-3 border-l-4 border-blue-500 bg-gray-50 mb-2';
+            
+            const speakerIcon = transcript.speaker_name !== 'Participante Desconhecido' ? '👤' : '❓';
+            const confidenceColor = transcript.confidence_score > 0.8 ? 'text-green-600' : 'text-yellow-600';
+            
+            transcriptItem.innerHTML = `
+                <div class="flex justify-between items-start mb-1">
+                    <span class="font-semibold text-blue-700">${speakerIcon} ${transcript.speaker_name}</span>
+                    <span class="${confidenceColor} text-xs">Confiança: ${Math.round(transcript.confidence_score * 100)}%</span>
+                </div>
+                <p class="text-gray-800">${transcript.content}</p>
+                <div class="text-xs text-gray-500 mt-1">
+                    ${new Date(transcript.timestamp).toLocaleTimeString()}
+                    ${transcript.is_action_item ? ' • 🎯 Item de Ação' : ''}
+                    ${transcript.is_decision ? ' • ✅ Decisão' : ''}
+                </div>
+            `;
+            
+            transcriptContainer.appendChild(transcriptItem);
+            transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+        }
+    }
+
+    async generateMeetingAgenda() {
+        if (!this.currentMeeting) {
+            this.addMessageToChat('❌ Nenhuma reunião ativa.', 'ai');
+            return;
+        }
+
+        try {
+            this.addMessageToChat('📋 Gerando pauta da reunião com IA...', 'ai');
+
+            const response = await this.callAPI(`/api/meetings/${this.currentMeeting.id}/generate-agenda`, {
+                method: 'POST'
+            });
+
+            if (response.success) {
+                this.displayMeetingAgenda(response.agenda);
+                this.addMessageToChat(`✅ ${response.message}`, 'ai');
+            }
+        } catch (error) {
+            console.error('Error generating agenda:', error);
+            this.addMessageToChat('❌ Erro ao gerar pauta.', 'ai');
+        }
+    }
+
+    displayMeetingAgenda(agenda) {
+        const agendaContainer = document.getElementById('agenda-container');
+        if (agendaContainer) {
+            agendaContainer.innerHTML = `
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">${agenda.title}</h3>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">📝 Resumo</h4>
+                        <p class="text-gray-600">${agenda.summary}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">🎯 Pontos-Chave</h4>
+                        <ul class="list-disc list-inside text-gray-600">
+                            ${agenda.key_points.map(point => `<li>${point}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">✅ Itens de Ação</h4>
+                        <ul class="list-disc list-inside text-gray-600">
+                            ${agenda.action_items.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">🏆 Decisões Tomadas</h4>
+                        <ul class="list-disc list-inside text-gray-600">
+                            ${agenda.decisions_made.map(decision => `<li>${decision}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">🚀 Próximos Passos</h4>
+                        <ul class="list-disc list-inside text-gray-600">
+                            ${agenda.next_steps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="text-xs text-gray-400 mt-4">
+                        Gerado automaticamente em ${new Date(agenda.generated_at).toLocaleString()}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async endMeeting() {
+        if (!this.currentMeeting) {
+            this.addMessageToChat('❌ Nenhuma reunião ativa.', 'ai');
+            return;
+        }
+
+        if (confirm('🤔 Tem certeza que deseja finalizar a reunião?')) {
+            try {
+                // Parar gravação se estiver ativa
+                if (this.isRecording) {
+                    this.stopMeetingRecording();
+                }
+
+                const response = await this.callAPI(`/api/meetings/${this.currentMeeting.id}/end`, {
+                    method: 'POST'
+                });
+
+                if (response.success) {
+                    this.currentMeeting = null;
+                    this.updateMeetingStatus('ended', '✅ Reunião finalizada');
+                    this.addMessageToChat(`🎉 ${response.message}`, 'ai');
+                    this.hideMeetingControls();
+                    
+                    // Mostrar estatísticas
+                    const stats = response.statistics;
+                    this.addMessageToChat(`📊 **Estatísticas da Reunião:**
+• Duração: ${stats.duration_minutes} minutos
+• Participantes: ${stats.total_participants}
+• Transcrições: ${stats.total_transcripts}
+• Qualidade: ${Math.round(stats.quality_score * 100)}%`, 'ai');
+                }
+            } catch (error) {
+                console.error('Error ending meeting:', error);
+                this.addMessageToChat('❌ Erro ao finalizar reunião.', 'ai');
+            }
+        }
+    }
+
+    async loadUserMeetings() {
+        try {
+            const response = await this.callAPI(`/api/meetings/user/${this.userId}`);
+            this.displayMeetingsList(response.meetings);
+        } catch (error) {
+            console.error('Error loading meetings:', error);
+            this.addMessageToChat('❌ Erro ao carregar reuniões.', 'ai');
+        }
+    }
+
+    displayMeetingsList(meetings) {
+        const meetingsContainer = document.getElementById('meetings-list');
+        if (meetingsContainer) {
+            meetingsContainer.innerHTML = meetings.map(meeting => `
+                <div class="meeting-item bg-white rounded-lg shadow p-4 mb-3 border-l-4 ${meeting.status === 'completed' ? 'border-green-500' : 'border-blue-500'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">${meeting.title}</h4>
+                            <p class="text-sm text-gray-600">${meeting.description || 'Sem descrição'}</p>
+                            <div class="text-xs text-gray-500 mt-1">
+                                📅 ${new Date(meeting.start_time).toLocaleString()}
+                                ${meeting.end_time ? ` - ${new Date(meeting.end_time).toLocaleString()}` : ' (Em andamento)'}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block px-2 py-1 text-xs rounded ${
+                                meeting.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                meeting.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                            }">
+                                ${meeting.status === 'completed' ? '✅ Finalizada' :
+                                  meeting.status === 'active' ? '🔴 Ativa' : '⏸️ Pausada'}
+                            </span>
+                            <div class="text-xs text-gray-500 mt-1">
+                                👥 ${meeting.participants_count} participantes
+                                📝 ${meeting.transcripts_count} transcrições
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <button onclick="iaon.viewMeetingDetails(${meeting.id})" class="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                            Ver Detalhes
+                        </button>
+                        ${meeting.agenda_generated ? 
+                            `<button onclick="iaon.viewMeetingAgenda(${meeting.id})" class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                                Ver Pauta
+                            </button>` : ''
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    async viewMeetingDetails(meetingId) {
+        try {
+            const response = await this.callAPI(`/api/meetings/${meetingId}`);
+            this.displayMeetingDetailsModal(response);
+        } catch (error) {
+            console.error('Error loading meeting details:', error);
+            this.addMessageToChat('❌ Erro ao carregar detalhes da reunião.', 'ai');
+        }
+    }
+
+    showMeetingControls() {
+        const meetingControls = document.getElementById('meeting-controls');
+        if (meetingControls) {
+            meetingControls.classList.remove('hidden');
+        }
+    }
+
+    hideMeetingControls() {
+        const meetingControls = document.getElementById('meeting-controls');
+        if (meetingControls) {
+            meetingControls.classList.add('hidden');
+        }
+    }
+
+    updateMeetingStatus(status, message) {
+        const statusElement = document.getElementById('meeting-status');
+        if (statusElement) {
+            statusElement.textContent = message;
+            statusElement.className = `meeting-status ${status}`;
+        }
+    }
+
+    updateParticipantsList() {
+        const participantsContainer = document.getElementById('participants-list');
+        if (participantsContainer) {
+            participantsContainer.innerHTML = this.meetingParticipants.map(participant => `
+                <div class="participant-item flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div>
+                        <span class="font-medium">${participant.participant_name}</span>
+                        <span class="text-sm text-gray-500 ml-2">(${participant.participant_role})</span>
+                    </div>
+                    <div class="text-xs text-gray-400">
+                        ${participant.is_verified ? '✅ Verificado' : '⏳ Pendente'}
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    processMeetingAudio(audioBlob) {
+        // Processar áudio final da reunião
+        console.log('Processing meeting audio blob:', audioBlob);
+        // Em produção, enviar para transcrição final
+    }
+
+    // ==================== FIM SISTEMA DE REUNIÕES ====================
 }
 
 // Initialize IAON

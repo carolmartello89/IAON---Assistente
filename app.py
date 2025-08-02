@@ -135,21 +135,31 @@ def add_security_headers(response):
     
     return response
 
-# Criar tabelas
-with app.app_context():
-    db.create_all()
-    
-    # Criar usuário padrão se não existir
-    if not User.query.first():
-        admin_user = User(
-            username='admin',
-            email='admin@iaon.com',
-            full_name='Administrador IAON',
-            is_active=True
-        )
-        db.session.add(admin_user)
-        db.session.commit()
-        print("Usuário administrador criado!")
+# Função para inicializar o banco de dados
+def init_database():
+    """Inicializa o banco de dados de forma segura"""
+    try:
+        with app.app_context():
+            db.create_all()
+            
+            # Criar usuário padrão se não existir (apenas em desenvolvimento)
+            if os.getenv('FLASK_ENV') != 'production':
+                if not User.query.first():
+                    admin_user = User(
+                        username='admin',
+                        email='admin@iaon.com',
+                        full_name='Administrador IAON',
+                        is_active=True
+                    )
+                    db.session.add(admin_user)
+                    db.session.commit()
+                    print("Usuário administrador criado!")
+    except Exception as e:
+        print(f"Erro ao inicializar banco de dados: {e}")
+
+# Inicializar apenas se não estiver em ambiente serverless
+if os.getenv('FLASK_ENV') != 'production':
+    init_database()
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -380,22 +390,44 @@ def internal_error(error):
         'message': 'Tente novamente mais tarde'
     }), 500
 
+@app.route('/test')
+def test():
+    """Rota de teste simples"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'IAON está funcionando!',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
     """Servir arquivos estáticos e SPA"""
-    static_folder_path = app.static_folder
-    if static_folder_path is None:
-        return "Static folder not configured", 404
+    try:
+        # Inicializar banco de dados na primeira requisição (Vercel)
+        if os.getenv('FLASK_ENV') == 'production':
+            try:
+                db.create_all()
+            except Exception as e:
+                print(f"Erro ao criar tabelas: {e}")
+        
+        static_folder_path = app.static_folder
+        if static_folder_path is None:
+            return "Static folder not configured", 404
 
-    if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
-        return send_from_directory(static_folder_path, path)
-    else:
-        index_path = os.path.join(static_folder_path, 'index.html')
-        if os.path.exists(index_path):
-            return send_from_directory(static_folder_path, 'index.html')
+        if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
+            return send_from_directory(static_folder_path, path)
         else:
-            return "index.html not found", 404
+            index_path = os.path.join(static_folder_path, 'index.html')
+            if os.path.exists(index_path):
+                return send_from_directory(static_folder_path, 'index.html')
+            else:
+                return "index.html not found", 404
+    except Exception as e:
+        return jsonify({
+            'error': 'Server error',
+            'message': str(e)
+        }), 500
 
 def generate_ai_response(message):
     """Gerar resposta da IA (simulada)"""

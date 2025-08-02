@@ -20,8 +20,8 @@ Uma aplicação web moderna construída com Flask, oferecendo funcionalidades de
 
 1. Clone o repositório:
 ```bash
-git clone <seu-repositorio>
-cd iaon
+git clone https://github.com/carolmartello89/IAON---Assistente.git
+cd IAON---Assistente
 ```
 
 2. Instale as dependências:

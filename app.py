@@ -46,7 +46,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 # Inicializar banco de dados
 db.init_app(app)
 
-# Modelos básicos
+# Modelos avançados
 class User(db.Model):
     __tablename__ = 'users'
     
@@ -54,10 +54,16 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     full_name = db.Column(db.String(200))
+    preferred_name = db.Column(db.String(100))  # Como quer ser chamado
     password_hash = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True)
+    is_onboarded = db.Column(db.Boolean, default=False)  # Se completou o onboarding
+    language_preference = db.Column(db.String(10), default='pt-BR')
+    theme_preference = db.Column(db.String(20), default='auto')
+    voice_enabled = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
         return {
@@ -65,7 +71,12 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'full_name': self.full_name,
+            'preferred_name': self.preferred_name,
             'is_active': self.is_active,
+            'is_onboarded': self.is_onboarded,
+            'language_preference': self.language_preference,
+            'theme_preference': self.theme_preference,
+            'voice_enabled': self.voice_enabled,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
@@ -74,12 +85,31 @@ class VoiceBiometry(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    voice_features = db.Column(db.Text)  # JSON string
+    voice_features = db.Column(db.Text)  # JSON string com características da voz
     enrollment_phrase = db.Column(db.String(500))
     is_enrolled = db.Column(db.Boolean, default=False)
     samples_count = db.Column(db.Integer, default=0)
+    required_samples = db.Column(db.Integer, default=5)  # Amostras necessárias
+    confidence_threshold = db.Column(db.Float, default=0.85)  # Limite de confiança
+    enrollment_quality = db.Column(db.String(20), default='pending')  # pending, good, excellent
+    last_verification = db.Column(db.DateTime)
+    verification_attempts = db.Column(db.Integer, default=0)
+    successful_verifications = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def get_enrollment_progress(self):
+        return min(100, (self.samples_count / self.required_samples) * 100)
+    
+    def to_dict(self):
+        return {
+            'is_enrolled': self.is_enrolled,
+            'samples_count': self.samples_count,
+            'required_samples': self.required_samples,
+            'enrollment_progress': self.get_enrollment_progress(),
+            'enrollment_quality': self.enrollment_quality,
+            'confidence_threshold': self.confidence_threshold
+        }
 
 class Conversation(db.Model):
     __tablename__ = 'conversations'
@@ -177,7 +207,200 @@ def health_check():
         }
     })
 
-@app.route('/api/system-info', methods=['GET'])
+@app.route('/api/onboarding/status', methods=['GET'])
+def onboarding_status():
+    """Verificar status do onboarding do usuário"""
+    try:
+        user_id = request.args.get('user_id', 1, type=int)
+        user = User.query.get(user_id)
+        
+        if not user:
+            # Criar usuário se não existir
+            user = User(
+                username=f'user_{user_id}',
+                email=f'user{user_id}@iaon.com',
+                full_name='Usuário IAON',
+                is_onboarded=False
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        biometry = VoiceBiometry.query.filter_by(user_id=user_id).first()
+        
+        return jsonify({
+            'user': user.to_dict(),
+            'needs_onboarding': not user.is_onboarded,
+            'voice_biometry': biometry.to_dict() if biometry else None
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/onboarding/complete', methods=['POST'])
+def complete_onboarding():
+    """Completar o onboarding do usuário"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 1)
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+        
+        # Atualizar informações do usuário
+        user.full_name = data.get('full_name', user.full_name)
+        user.preferred_name = data.get('preferred_name', user.preferred_name)
+        user.language_preference = data.get('language_preference', 'pt-BR')
+        user.theme_preference = data.get('theme_preference', 'auto')
+        user.voice_enabled = data.get('voice_enabled', False)
+        user.is_onboarded = True
+        user.last_activity = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Bem-vindo(a), {user.preferred_name or user.full_name}!',
+            'user': user.to_dict()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/voice-biometry/advanced-status/<int:user_id>', methods=['GET'])
+def advanced_voice_biometry_status(user_id):
+    """Status avançado da biometria de voz"""
+    try:
+        biometry = VoiceBiometry.query.filter_by(user_id=user_id).first()
+        
+        if not biometry:
+            # Criar registro de biometria se não existir
+            biometry = VoiceBiometry(user_id=user_id)
+            db.session.add(biometry)
+            db.session.commit()
+        
+        return jsonify(biometry.to_dict())
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/voice-biometry/advanced-enroll', methods=['POST'])
+def advanced_voice_biometry_enroll():
+    """Cadastro avançado de biometria de voz"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 1)
+        audio_data = data.get('audio_data', '')  # Base64 encoded audio
+        enrollment_phrase = data.get('enrollment_phrase', '')
+        audio_quality = data.get('audio_quality', 'unknown')
+        
+        # Buscar ou criar registro de biometria
+        biometry = VoiceBiometry.query.filter_by(user_id=user_id).first()
+        
+        if not biometry:
+            biometry = VoiceBiometry(
+                user_id=user_id,
+                enrollment_phrase=enrollment_phrase
+            )
+            db.session.add(biometry)
+        
+        # Simular análise avançada de voz
+        import json
+        voice_features = {
+            'sample_id': biometry.samples_count + 1,
+            'timestamp': datetime.utcnow().isoformat(),
+            'phrase': enrollment_phrase,
+            'quality': audio_quality,
+            'duration': data.get('duration', 0),
+            'frequency_analysis': {
+                'fundamental_freq': 150 + (biometry.samples_count * 10),
+                'harmonics': [300, 450, 600],
+                'formants': [800, 1200, 2400]
+            },
+            'voice_characteristics': {
+                'pitch_variation': 0.1 + (biometry.samples_count * 0.02),
+                'speed': data.get('speech_rate', 1.0),
+                'energy': 0.8 + (biometry.samples_count * 0.01)
+            }
+        }
+        
+        # Atualizar características da voz
+        if biometry.voice_features:
+            existing_features = json.loads(biometry.voice_features)
+            existing_features.append(voice_features)
+            biometry.voice_features = json.dumps(existing_features)
+        else:
+            biometry.voice_features = json.dumps([voice_features])
+        
+        # Incrementar contador de amostras
+        biometry.samples_count += 1
+        
+        # Determinar qualidade do cadastro
+        if biometry.samples_count >= biometry.required_samples:
+            biometry.is_enrolled = True
+            biometry.enrollment_quality = 'excellent' if biometry.samples_count >= 7 else 'good'
+            
+            # Atualizar usuário
+            user = User.query.get(user_id)
+            if user:
+                user.voice_enabled = True
+        
+        db.session.commit()
+        
+        return jsonify({
+            'enrollment_complete': biometry.is_enrolled,
+            'samples_count': biometry.samples_count,
+            'required_samples': biometry.required_samples,
+            'enrollment_progress': biometry.get_enrollment_progress(),
+            'enrollment_quality': biometry.enrollment_quality,
+            'message': 'Amostra de voz processada com sucesso!' if not biometry.is_enrolled 
+                      else f'🎉 Biometria de voz cadastrada com qualidade {biometry.enrollment_quality}!'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/voice-biometry/verify', methods=['POST'])
+def verify_voice_biometry():
+    """Verificar biometria de voz"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 1)
+        audio_data = data.get('audio_data', '')
+        phrase = data.get('phrase', '')
+        
+        biometry = VoiceBiometry.query.filter_by(user_id=user_id).first()
+        
+        if not biometry or not biometry.is_enrolled:
+            return jsonify({
+                'verified': False,
+                'message': 'Biometria de voz não cadastrada'
+            }), 400
+        
+        # Simular verificação avançada
+        import random
+        
+        biometry.verification_attempts += 1
+        
+        # Simular análise de similaridade (em produção, usar ML real)
+        confidence_score = random.uniform(0.75, 0.95)
+        verified = confidence_score >= biometry.confidence_threshold
+        
+        if verified:
+            biometry.successful_verifications += 1
+            biometry.last_verification = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'verified': verified,
+            'confidence_score': round(confidence_score, 3),
+            'threshold': biometry.confidence_threshold,
+            'message': '✅ Voz verificada com sucesso!' if verified else '❌ Verificação de voz falhou'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 def system_info():
     """Informações do sistema"""
     return jsonify({
@@ -236,8 +459,8 @@ def ai_chat():
         )
         db.session.add(user_message)
         
-        # Gerar resposta da IA (simulada)
-        ai_response = generate_ai_response(message)
+        # Gerar resposta personalizada da IA
+        ai_response = generate_ai_response(message, user_id)
         
         # Salvar resposta da IA
         ai_message = Message(
@@ -266,13 +489,16 @@ def voice_command():
         user_id = data.get('user_id', 1)
         command_text = data.get('command_text', '')
         
-        # Processar comando de voz
-        result = process_voice_command(command_text)
+        # Processar comando de voz avançado
+        result = process_voice_command(command_text, user_id)
         
         return jsonify({
             'executed': True,
             'intent': result['intent'],
-            'execution_result': result['result']
+            'execution_result': result['result'],
+            'action': result.get('action'),
+            'section': result.get('section'),
+            'timestamp': datetime.utcnow().isoformat()
         })
         
     except Exception as e:
@@ -429,64 +655,191 @@ def serve(path):
             'message': str(e)
         }), 500
 
-def generate_ai_response(message):
-    """Gerar resposta da IA (simulada)"""
+def generate_ai_response(message, user_id=1):
+    """Gerar resposta personalizada da IA"""
+    # Buscar informações do usuário
+    user = User.query.get(user_id)
+    preferred_name = user.preferred_name if user and user.preferred_name else "amigo(a)"
+    
     message_lower = message.lower()
     
-    if 'olá' in message_lower or 'oi' in message_lower:
-        return "Olá! Sou o IAON, seu assistente IA avançado. Como posso ajudá-lo hoje?"
+    # Respostas personalizadas baseadas no contexto
+    if any(word in message_lower for word in ['olá', 'oi', 'hey', 'hello']):
+        greetings = [
+            f"Olá, {preferred_name}! 👋 Sou o IAON, seu assistente IA avançado. Como posso ajudá-lo hoje?",
+            f"Oi, {preferred_name}! 😊 É um prazer conversar com você. Em que posso ser útil?",
+            f"Hey, {preferred_name}! 🌟 Estou aqui para tornar seu dia mais produtivo. O que vamos fazer?"
+        ]
+        import random
+        return random.choice(greetings)
     
-    elif 'medicamento' in message_lower or 'remédio' in message_lower:
-        return "🏥 Posso ajudá-lo com informações sobre medicamentos. Por favor, me informe o nome do medicamento que deseja consultar. Lembre-se: sempre consulte um médico antes de tomar qualquer medicamento."
+    elif any(word in message_lower for word in ['medicamento', 'remédio', 'medicina', 'saúde']):
+        return f"""🏥 **Sistema Médico Avançado**, {preferred_name}!
+
+Posso ajudá-lo com:
+• 💊 Consulta de medicamentos e dosagens
+• ⚠️ Verificação de interações medicamentosas
+• 📋 Gestão de prescrições médicas
+• 🕐 Lembretes de medicação
+• 🏥 Histórico médico digital
+• 📞 Contatos médicos de emergência
+
+**⚠️ Importante:** Sempre consulte um médico para orientações específicas."""
     
-    elif 'agenda' in message_lower or 'compromisso' in message_lower:
-        return "📅 Posso ajudá-lo a gerenciar sua agenda. Gostaria de adicionar um novo compromisso, ver os próximos eventos ou configurar um lembrete?"
+    elif any(word in message_lower for word in ['agenda', 'compromisso', 'reunião', 'encontro']):
+        return f"""📅 **Agenda Inteligente**, {preferred_name}!
+
+Recursos disponíveis:
+• 📝 Criação de compromissos com IA
+• 🔔 Lembretes inteligentes
+• 🕐 Gestão de horários otimizada
+• 👥 Sincronização com contatos
+• 🌍 Integração com fuso horário
+• 📊 Análise de produtividade
+• 🤖 Sugestões automáticas de horários"""
     
-    elif 'finanças' in message_lower or 'dinheiro' in message_lower:
-        return "💰 Estou aqui para ajudar com seu controle financeiro. Posso registrar gastos, mostrar relatórios ou ajudar com seu orçamento. O que você gostaria de fazer?"
+    elif any(word in message_lower for word in ['finanças', 'dinheiro', 'gasto', 'orçamento', 'economia']):
+        return f"""💰 **Controle Financeiro Avançado**, {preferred_name}!
+
+Funcionalidades premium:
+• 📊 Dashboard financeiro em tempo real
+• 💳 Categorização automática de gastos
+• 📈 Análise de tendências e padrões
+• 🎯 Metas financeiras personalizadas
+• 📱 Integração com bancos (futuro)
+• 💡 Dicas de economia baseadas em IA
+• 📋 Relatórios detalhados mensais"""
     
-    elif 'ia ' in message_lower:
-        return "🤖 Comando de voz detectado! Para sua segurança, comandos de voz requerem verificação de biometria. Certifique-se de que sua biometria de voz está configurada."
+    elif any(word in message_lower for word in ['voz', 'biometria', 'comandos']):
+        biometry = VoiceBiometry.query.filter_by(user_id=user_id).first()
+        if biometry and biometry.is_enrolled:
+            return f"""🎤 **Sistema de Voz Avançado ativo**, {preferred_name}!
+
+Comandos disponíveis:
+• "IA agenda" - Gerenciar compromissos
+• "IA medicina" - Sistema médico
+• "IA finanças" - Controle financeiro
+• "IA relatório" - Gerar relatórios
+• "IA ajuda" - Lista completa de comandos
+
+✅ Sua biometria está configurada com qualidade **{biometry.enrollment_quality}**"""
+        else:
+            return f"🔒 **Sistema de Voz**, {preferred_name}! Para usar comandos de voz seguros, você precisa configurar sua biometria de voz primeiro."
     
     elif 'ajuda' in message_lower or 'help' in message_lower:
-        return """🆘 Aqui estão algumas coisas que posso fazer:
+        return f"""🆘 **Central de Ajuda IAON**, {preferred_name}!
 
-• 💬 Conversar e responder perguntas
-• 🏥 Verificar medicamentos e interações
-• 📅 Gerenciar sua agenda e compromissos
-• 💰 Controlar suas finanças pessoais
-• 👥 Gerenciar seus contatos
-• 🎤 Responder a comandos de voz (com biometria)
-• 📊 Gerar relatórios e análises
+**🎯 Principais Recursos:**
+• 💬 Chat inteligente com contexto
+• 🎤 Comandos de voz com biometria
+• 🏥 Sistema médico completo
+• 📅 Agenda inteligente
+• � Controle financeiro avançado
+• 📊 Relatórios e análises
+• � Segurança militar
 
-Diga "IA" seguido do comando para usar controle por voz!"""
+**🎤 Comandos de Voz:**
+Diga "IA" + comando para ações específicas
+
+**💡 Dica:** Use linguagem natural - eu entendo contexto!"""
+    
+    elif any(word in message_lower for word in ['obrigado', 'obrigada', 'valeu', 'thanks']):
+        return f"� Por nada, {preferred_name}! É sempre um prazer ajudar. Estou aqui sempre que precisar!"
+    
+    elif any(word in message_lower for word in ['tchau', 'até', 'bye', 'adeus']):
+        return f"👋 Até logo, {preferred_name}! Foi ótimo conversar com você. Volte sempre que quiser!"
     
     else:
-        return f"Entendi sua mensagem: '{message}'. Como assistente IA, estou aqui para ajudar com diversas tarefas. Posso auxiliar com medicina, finanças, agenda, contatos e muito mais. Como posso ser útil?"
+        # Resposta contextual avançada
+        return f"""Entendi sua mensagem, {preferred_name}: "{message}"
 
-def process_voice_command(command_text):
-    """Processar comando de voz"""
+🤖 Como seu assistente IA avançado, posso ajudar com:
+• **Medicina**: Consultas sobre medicamentos e saúde
+• **Agenda**: Organização de compromissos
+• **Finanças**: Controle de gastos e orçamento
+• **Análises**: Relatórios personalizados
+• **Comandos de voz**: Controle hands-free
+
+💡 **Dica**: Seja específico para respostas mais precisas!"""
+
+def process_voice_command(command_text, user_id=1):
+    """Processar comando de voz avançado"""
     command_lower = command_text.lower()
     
-    if 'agenda' in command_lower:
+    # Buscar usuário para personalização
+    user = User.query.get(user_id)
+    preferred_name = user.preferred_name if user and user.preferred_name else "usuário"
+    
+    # Comandos de agenda
+    if any(word in command_lower for word in ['agenda', 'compromisso', 'reunião', 'encontro']):
         return {
             'intent': 'agenda_management',
-            'result': 'Abrindo sistema de agenda...'
+            'result': f'📅 Abrindo agenda inteligente para {preferred_name}...',
+            'action': 'open_section',
+            'section': 'agenda'
         }
-    elif 'medicamento' in command_lower:
+    
+    # Comandos médicos
+    elif any(word in command_lower for word in ['medicamento', 'remédio', 'medicina', 'saúde', 'médico']):
         return {
             'intent': 'medical_check',
-            'result': 'Abrindo sistema médico...'
+            'result': f'🏥 Ativando sistema médico avançado para {preferred_name}...',
+            'action': 'open_section',
+            'section': 'medical'
         }
-    elif 'finanças' in command_lower:
+    
+    # Comandos financeiros
+    elif any(word in command_lower for word in ['finanças', 'dinheiro', 'gasto', 'orçamento', 'financeiro']):
         return {
             'intent': 'financial_management',
-            'result': 'Abrindo controle financeiro...'
+            'result': f'💰 Carregando controle financeiro para {preferred_name}...',
+            'action': 'open_section',
+            'section': 'finance'
         }
+    
+    # Comandos de relatório
+    elif any(word in command_lower for word in ['relatório', 'relatorio', 'análise', 'dados']):
+        return {
+            'intent': 'generate_report',
+            'result': f'📊 Gerando relatório personalizado para {preferred_name}...',
+            'action': 'generate_report',
+            'section': 'reports'
+        }
+    
+    # Comandos de ajuda
+    elif any(word in command_lower for word in ['ajuda', 'help', 'comando']):
+        return {
+            'intent': 'show_help',
+            'result': f'🆘 Exibindo central de ajuda para {preferred_name}...',
+            'action': 'show_help',
+            'section': 'help'
+        }
+    
+    # Comandos de configuração
+    elif any(word in command_lower for word in ['configuração', 'config', 'configurar', 'ajuste']):
+        return {
+            'intent': 'settings_management',
+            'result': f'⚙️ Abrindo configurações para {preferred_name}...',
+            'action': 'open_section',
+            'section': 'settings'
+        }
+    
+    # Comandos de voz/biometria
+    elif any(word in command_lower for word in ['voz', 'biometria', 'cadastrar']):
+        return {
+            'intent': 'voice_management',
+            'result': f'🎤 Acessando sistema de biometria de voz para {preferred_name}...',
+            'action': 'open_section',
+            'section': 'voice'
+        }
+    
+    # Comando genérico
     else:
         return {
             'intent': 'general_command',
-            'result': f'Comando processado: {command_text}'
+            'result': f'🤖 Processando comando para {preferred_name}: "{command_text}"',
+            'action': 'process_general',
+            'section': 'chat'
         }
 
 # Para compatibilidade com Vercel

@@ -32,6 +32,23 @@ class IAON {
         this.init();
     }
 
+    // Obter palavra de ativação personalizada do usuário
+    getTriggerWord() {
+        return this.user?.custom_trigger_word || 'EION';
+    }
+
+    // Gerar exemplos de comandos com palavra personalizada
+    getTriggerExamples() {
+        const trigger = this.getTriggerWord();
+        return [
+            `"${trigger}, ligar para João"`,
+            `"${trigger}, abrir WhatsApp"`,
+            `"${trigger}, iniciar reunião"`,
+            `"${trigger}, configuração"`,
+            `"${trigger}, ajuda"`
+        ];
+    }
+
     async init() {
         this.setupEventListeners();
         this.setupVoiceRecognition();
@@ -39,7 +56,9 @@ class IAON {
 
         // Verificar status do onboarding
         await this.checkOnboardingStatus();
-    } generateSessionId() {
+    }
+
+    generateSessionId() {
         return 'iaon_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 
@@ -318,6 +337,522 @@ class IAON {
         }
 
         this.currentSection = sectionName;
+
+        // Load section-specific data
+        this.loadSectionData(sectionName);
+    }
+
+    async loadSectionData(sectionName) {
+        switch (sectionName) {
+            case 'apps':
+                await this.loadAppsData();
+                break;
+            case 'contacts':
+                await this.loadContactsData();
+                break;
+            case 'call_logs':
+                await this.loadCallLogsData();
+                break;
+            case 'meetings':
+                await this.loadMeetingsData();
+                break;
+            default:
+                // No specific data loading needed
+                break;
+        }
+    }
+
+    async loadAppsData() {
+        try {
+            const response = await this.callAPI(`/api/apps/list/${this.userId}?limit=20&sort_by=usage_count`);
+
+            if (response.success) {
+                this.displayAppsData(response.apps, response.total_apps, response.enabled_apps);
+            } else {
+                console.error('Error loading apps:', response.error);
+            }
+        } catch (error) {
+            console.error('Error loading apps data:', error);
+        }
+    }
+
+    async loadContactsData() {
+        try {
+            // Simular dados de contatos (em produção, integraria com API real)
+            const contactsData = {
+                contacts: [
+                    { id: 1, name: 'João Silva', phone: '+55 11 99999-1234', is_favorite: true },
+                    { id: 2, name: 'Maria Santos', phone: '+55 11 88888-5678', is_favorite: false },
+                    { id: 3, name: 'Pedro Oliveira', phone: '+55 11 77777-9012', is_favorite: true }
+                ],
+                total: 3,
+                favorites: 2
+            };
+
+            this.displayContactsData(contactsData.contacts, contactsData.total, contactsData.favorites);
+        } catch (error) {
+            console.error('Error loading contacts data:', error);
+        }
+    }
+
+    async loadCallLogsData() {
+        try {
+            // Simular dados de histórico de chamadas
+            const callLogsData = {
+                calls: [
+                    { id: 1, contact_name: 'João Silva', phone: '+55 11 99999-1234', type: 'outgoing', duration: '5:23', timestamp: new Date(Date.now() - 3600000) },
+                    { id: 2, contact_name: 'Maria Santos', phone: '+55 11 88888-5678', type: 'incoming', duration: '2:15', timestamp: new Date(Date.now() - 7200000) },
+                    { id: 3, contact_name: 'Pedro Oliveira', phone: '+55 11 77777-9012', type: 'missed', duration: '0:00', timestamp: new Date(Date.now() - 10800000) }
+                ],
+                total: 3
+            };
+
+            this.displayCallLogsData(callLogsData.calls, callLogsData.total);
+        } catch (error) {
+            console.error('Error loading call logs data:', error);
+        }
+    }
+
+    async loadMeetingsData() {
+        try {
+            const response = await this.callAPI(`/api/meetings/user/${this.userId}`);
+
+            if (response.success) {
+                this.displayMeetingsData(response.meetings);
+            } else {
+                console.error('Error loading meetings:', response.error);
+            }
+        } catch (error) {
+            console.error('Error loading meetings data:', error);
+        }
+    }
+
+    displayAppsData(apps, totalApps, enabledApps) {
+        const container = document.getElementById('apps-list') || this.createAppsContainer();
+
+        if (!apps || apps.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-8">
+                    <div class="text-gray-400 text-6xl mb-4">📱</div>
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">Nenhum aplicativo encontrado</h3>
+                    <p class="text-gray-500">Execute um escaneamento para detectar aplicativos instalados.</p>
+                    <button onclick="iaon.scanApps()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        🔍 Escanear Aplicativos
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        const appsHtml = apps.map(app => `
+            <div class="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">📱</span>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-gray-900">${app.display_name}</h3>
+                            <p class="text-sm text-gray-500">${app.package_name}</p>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                    Usado ${app.usage_count || 0}x
+                                </span>
+                                ${app.voice_aliases && app.voice_aliases.length > 0 ?
+                `<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                        🎤 ${app.voice_aliases.join(', ')}
+                                    </span>` : ''
+            }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end space-y-2">
+                        <button onclick="iaon.launchApp(${app.id})" 
+                                class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                                ${!app.is_enabled ? 'disabled' : ''}>
+                            🚀 Abrir
+                        </button>
+                        <div class="text-xs text-gray-400">
+                            ${app.last_used ? new Date(app.last_used).toLocaleDateString() : 'Nunca usado'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">📱 Aplicativos Instalados</h2>
+                    <button onclick="iaon.scanApps()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        🔍 Escanear Novos Apps
+                    </button>
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-center mb-6">
+                    <div class="bg-blue-50 rounded-lg p-3">
+                        <div class="text-2xl font-bold text-blue-600">${totalApps}</div>
+                        <div class="text-sm text-gray-600">Total de Apps</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-3">
+                        <div class="text-2xl font-bold text-green-600">${enabledApps}</div>
+                        <div class="text-sm text-gray-600">Apps Habilitados</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-3">
+                        <div class="text-2xl font-bold text-purple-600">${apps.filter(app => app.voice_aliases && app.voice_aliases.length > 0).length}</div>
+                        <div class="text-sm text-gray-600">Com Comandos de Voz</div>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-3">${appsHtml}</div>
+        `;
+    }
+
+    displayContactsData(contacts, total, favorites) {
+        const container = document.getElementById('contacts-list') || this.createContactsContainer();
+        const trigger = this.getTriggerWord();
+
+        if (!contacts || contacts.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-8">
+                    <div class="text-gray-400 text-6xl mb-4">📞</div>
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">Nenhum contato encontrado</h3>
+                    <p class="text-gray-500">Adicione contatos para usar comandos de voz.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const contactsHtml = contacts.map(contact => `
+            <div class="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-lg">👤</span>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-gray-900">
+                                ${contact.name}
+                                ${contact.is_favorite ? '<span class="text-yellow-500">⭐</span>' : ''}
+                            </h3>
+                            <p class="text-sm text-gray-500">${contact.phone}</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="iaon.callContact('${contact.phone}')" 
+                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                            📞 Ligar
+                        </button>
+                        <button onclick="iaon.voiceCallContact('${contact.name}')" 
+                                class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            🎤 Por Voz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">📞 Agenda de Contatos</h2>
+                    <div class="text-sm text-gray-500">
+                        ${total} contatos • ${favorites} favoritos
+                    </div>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <h3 class="font-medium text-yellow-800 mb-2">🎤 Comandos de Voz Disponíveis:</h3>
+                    <p class="text-sm text-yellow-700">
+                        • "${trigger}, ligar para [nome do contato]"<br>
+                        • "${trigger}, chamar [nome do contato]"<br>
+                        • "${trigger}, telefonar para [nome do contato]"
+                    </p>
+                    <div class="mt-2 text-xs text-yellow-600">
+                        💡 Sua palavra de ativação atual: <strong>"${trigger}"</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-3">${contactsHtml}</div>
+        `;
+    } displayCallLogsData(calls, total) {
+        const container = document.getElementById('call-logs-list') || this.createCallLogsContainer();
+
+        if (!calls || calls.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-8">
+                    <div class="text-gray-400 text-6xl mb-4">📋</div>
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">Nenhuma chamada registrada</h3>
+                    <p class="text-gray-500">Suas ligações aparecerão aqui.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const getCallIcon = (type) => {
+            switch (type) {
+                case 'outgoing': return '📞';
+                case 'incoming': return '📲';
+                case 'missed': return '📵';
+                default: return '📞';
+            }
+        };
+
+        const getCallColor = (type) => {
+            switch (type) {
+                case 'outgoing': return 'text-blue-600';
+                case 'incoming': return 'text-green-600';
+                case 'missed': return 'text-red-600';
+                default: return 'text-gray-600';
+            }
+        };
+
+        const callsHtml = calls.map(call => `
+            <div class="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 flex items-center justify-center">
+                            <span class="text-xl ${getCallColor(call.type)}">${getCallIcon(call.type)}</span>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-gray-900">${call.contact_name}</h3>
+                            <p class="text-sm text-gray-500">${call.phone}</p>
+                            <p class="text-xs text-gray-400">
+                                ${call.timestamp.toLocaleString()} • ${call.duration}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="iaon.callContact('${call.phone}')" 
+                                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                            📞 Religar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">📋 Histórico de Chamadas</h2>
+                <div class="text-sm text-gray-500 mb-4">
+                    ${total} chamadas registradas
+                </div>
+            </div>
+            <div class="space-y-3">${callsHtml}</div>
+        `;
+    }
+
+    displayMeetingsData(meetings) {
+        const container = document.getElementById('meetings-list') || this.createMeetingsContainer();
+
+        if (!meetings || meetings.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-8">
+                    <div class="text-gray-400 text-6xl mb-4">📹</div>
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">Nenhuma reunião registrada</h3>
+                    <p class="text-gray-500">Inicie uma nova reunião para começar.</p>
+                    <button onclick="iaon.startNewMeeting()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        📹 Nova Reunião
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        const meetingsHtml = meetings.map(meeting => `
+            <div class="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-medium text-gray-900">${meeting.title}</h3>
+                        <p class="text-sm text-gray-500">${meeting.description || 'Sem descrição'}</p>
+                        <p class="text-xs text-gray-400">
+                            ${new Date(meeting.start_time).toLocaleString()}
+                            ${meeting.end_time ? ' - ' + new Date(meeting.end_time).toLocaleString() : ' (Em andamento)'}
+                        </p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="iaon.viewMeeting(${meeting.id})" 
+                                class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            👁️ Ver Detalhes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">📹 Reuniões</h2>
+                    <button onclick="iaon.startNewMeeting()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        📹 Nova Reunião
+                    </button>
+                </div>
+            </div>
+            <div class="space-y-3">${meetingsHtml}</div>
+        `;
+    }
+
+    createAppsContainer() {
+        const appsSection = document.getElementById('apps-section');
+        const container = document.createElement('div');
+        container.id = 'apps-list';
+        container.className = 'p-6';
+        appsSection.appendChild(container);
+        return container;
+    }
+
+    createContactsContainer() {
+        const contactsSection = document.getElementById('contacts-section');
+        const container = document.createElement('div');
+        container.id = 'contacts-list';
+        container.className = 'p-6';
+        contactsSection.appendChild(container);
+        return container;
+    }
+
+    createCallLogsContainer() {
+        const callLogsSection = document.getElementById('call_logs-section');
+        const container = document.createElement('div');
+        container.id = 'call-logs-list';
+        container.className = 'p-6';
+        callLogsSection.appendChild(container);
+        return container;
+    }
+
+    createMeetingsContainer() {
+        const meetingsSection = document.getElementById('meetings-section');
+        const container = document.createElement('div');
+        container.id = 'meetings-list';
+        container.className = 'p-6';
+        meetingsSection.appendChild(container);
+        return container;
+    }
+
+    // Métodos de ação para as novas funcionalidades
+    async scanApps() {
+        try {
+            this.addMessageToChat('🔍 Escaneando aplicativos instalados...', 'ai');
+
+            const response = await this.callAPI('/api/apps/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: this.userId,
+                    force_rescan: true
+                })
+            });
+
+            if (response.success) {
+                this.addMessageToChat(`✅ Escaneamento concluído! ${response.apps_added} novos aplicativos encontrados.`, 'ai');
+                await this.loadAppsData(); // Recarregar lista
+            } else {
+                this.addMessageToChat(`❌ Erro no escaneamento: ${response.error}`, 'ai');
+            }
+        } catch (error) {
+            this.addMessageToChat('❌ Erro ao escanear aplicativos.', 'ai');
+            console.error('Error scanning apps:', error);
+        }
+    }
+
+    async launchApp(appId) {
+        try {
+            const response = await this.callAPI('/api/apps/launch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: this.userId,
+                    app_id: appId,
+                    method: 'manual'
+                })
+            });
+
+            if (response.success) {
+                this.addMessageToChat(`✅ ${response.message}`, 'ai');
+            } else {
+                this.addMessageToChat(`❌ ${response.error}`, 'ai');
+            }
+        } catch (error) {
+            this.addMessageToChat('❌ Erro ao abrir aplicativo.', 'ai');
+            console.error('Error launching app:', error);
+        }
+    }
+
+    // Mostrar ajuda com palavra de ativação personalizada
+    showHelpWithTriggerWord() {
+        const trigger = this.getTriggerWord();
+
+        this.addMessageToChat(`🆘 **Central de Ajuda IAON**
+
+**🎤 Sua palavra de ativação: "${trigger}"**
+
+**🎤 Comandos de Voz Disponíveis:**
+• "${trigger} reunião" - Sistema de reuniões com gravação
+• "${trigger} agenda" - Gerenciar compromissos
+• "${trigger} medicina" - Sistema médico
+• "${trigger} finanças" - Controle financeiro
+• "${trigger} contatos" - Agenda telefônica com voz
+• "${trigger} ligar para [contato]" - Fazer ligações por voz
+• "${trigger} abrir [app]" - Abrir aplicativos por comando
+• "${trigger} relatório" - Gerar relatórios inteligentes
+• "${trigger} configuração" - Ajustes do sistema
+
+**📱 Comandos de Aplicativos:**
+• "${trigger} abrir WhatsApp" - Abre o WhatsApp
+• "${trigger} executar Instagram" - Abre o Instagram
+• "${trigger} rodar Spotify" - Inicia o Spotify
+• "${trigger} iniciar Netflix" - Abre o Netflix
+
+**📞 Comandos de Contatos:**
+• "${trigger} ligar para [nome]" - Faz chamada por voz
+• "${trigger} contatos" - Abre agenda telefônica
+• "${trigger} histórico de chamadas" - Mostra ligações recentes
+
+**📹 Sistema de Reuniões:**
+• Gravação automática de alta qualidade
+• Reconhecimento de participantes por voz
+• Transcrição em tempo real com IA
+• Geração automática de pautas e conclusões
+• Relatórios inteligentes com sugestões
+
+**💬 Chat Inteligente:**
+Digite perguntas naturais sobre medicina, finanças, agenda ou qualquer tópico!
+
+**🔧 Configurações:**
+Acesse as configurações para personalizar sua palavra de ativação ("${trigger}") e outras preferências.
+
+**💡 Dica:** Para alterar sua palavra de ativação, use os endpoints:
+• \`/api/voice/trigger-word/configure\` - Configurar nova palavra
+• \`/api/voice/trigger-word/test\` - Testar reconhecimento
+• \`/api/voice/trigger-word/suggestions\` - Ver sugestões`, 'ai');
+    }
+
+    callContact(phone) {
+        // Simular chamada
+        this.addMessageToChat(`📞 Simulando chamada para ${phone}...`, 'ai');
+        console.log('Simulating call to:', phone);
+    }
+
+    voiceCallContact(contactName) {
+        // Comando de voz para ligar
+        const trigger = this.getTriggerWord();
+        this.addMessageToChat(`🎤 Comando de voz: "${trigger}, ligar para ${contactName}"`, 'user');
+        setTimeout(() => {
+            this.handleVoiceCommand(`ligar para ${contactName}`);
+        }, 1000);
+    }
+
+    startNewMeeting() {
+        this.addMessageToChat('📹 Iniciando nova reunião...', 'ai');
+        // Implementar lógica de nova reunião
+    }
+
+    viewMeeting(meetingId) {
+        this.addMessageToChat(`👁️ Visualizando detalhes da reunião ${meetingId}...`, 'ai');
+        // Implementar visualização de reunião
     }
 
     async sendMessage() {
@@ -549,32 +1084,39 @@ class IAON {
                 this.addMessageToChat('💰 Carregando controle financeiro personalizado...', 'ai');
                 break;
 
+            case 'contact_management':
+                this.showSection('contacts');
+                this.addMessageToChat('📱 Abrindo agenda de contatos com integração de voz...', 'ai');
+                break;
+
+            case 'call_history':
+                this.showSection('call_logs');
+                this.addMessageToChat('📋 Exibindo histórico de chamadas...', 'ai');
+                break;
+
+            case 'app_management':
+                this.showSection('apps');
+                this.addMessageToChat('📱 Visualizando aplicativos disponíveis...', 'ai');
+                break;
+
+            case 'app_launched':
+                this.addMessageToChat('✅ Aplicativo foi aberto com sucesso!', 'ai');
+                break;
+
+            case 'app_not_found':
+                this.addMessageToChat('❌ Aplicativo não encontrado. Tente ser mais específico.', 'ai');
+                break;
+
+            case 'app_launch_failed':
+                this.addMessageToChat('❌ Erro ao abrir aplicativo. Tente novamente.', 'ai');
+                break;
+
             case 'generate_report':
                 this.addMessageToChat('📊 Gerando relatório personalizado... (Em desenvolvimento)', 'ai');
                 break;
 
             case 'show_help':
-                this.addMessageToChat(`🆘 **Central de Ajuda IAON**
-
-**🎤 Comandos de Voz Disponíveis:**
-• "IA reunião" - Sistema de reuniões com gravação
-• "IA agenda" - Gerenciar compromissos
-• "IA medicina" - Sistema médico
-• "IA finanças" - Controle financeiro
-• "IA relatório" - Gerar relatórios
-• "IA configuração" - Ajustes do sistema
-
-**📹 Sistema de Reuniões:**
-• Gravação automática de alta qualidade
-• Reconhecimento de participantes por voz
-• Transcrição em tempo real
-• Geração automática de pautas
-
-**💬 Chat Inteligente:**
-Digite perguntas naturais sobre medicina, finanças, agenda ou qualquer tópico!
-
-**🔧 Configurações:**
-Acesse as configurações para personalizar sua experiência.`, 'ai');
+                this.showHelpWithTriggerWord();
                 break;
 
             case 'settings_management':
@@ -823,7 +1365,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
                 this.currentMeeting = response.meeting;
                 this.updateMeetingStatus('active', `📹 Reunião "${title}" iniciada`);
                 this.addMessageToChat(`🎉 ${response.message}`, 'ai');
-                
+
                 // Mostrar controles de reunião
                 this.showMeetingControls();
             }
@@ -874,7 +1416,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
         }
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
+            const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
@@ -903,7 +1445,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
             // Começar gravação
             this.meetingRecorder.start();
             this.isRecording = true;
-            
+
             this.updateMeetingStatus('recording', '🔴 Gravando reunião...');
             this.addMessageToChat('🎤 Gravação iniciada! A transcrição será feita automaticamente.', 'ai');
 
@@ -953,7 +1495,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
         try {
             // Simular dados de áudio para transcrição
             const audioData = this.generateMockAudioData();
-            
+
             const response = await this.callAPI(`/api/meetings/${this.currentMeeting.id}/transcribe`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -976,10 +1518,10 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
         if (transcriptContainer) {
             const transcriptItem = document.createElement('div');
             transcriptItem.className = 'transcript-item p-3 border-l-4 border-blue-500 bg-gray-50 mb-2';
-            
+
             const speakerIcon = transcript.speaker_name !== 'Participante Desconhecido' ? '👤' : '❓';
             const confidenceColor = transcript.confidence_score > 0.8 ? 'text-green-600' : 'text-yellow-600';
-            
+
             transcriptItem.innerHTML = `
                 <div class="flex justify-between items-start mb-1">
                     <span class="font-semibold text-blue-700">${speakerIcon} ${transcript.speaker_name}</span>
@@ -992,7 +1534,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
                     ${transcript.is_decision ? ' • ✅ Decisão' : ''}
                 </div>
             `;
-            
+
             transcriptContainer.appendChild(transcriptItem);
             transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
         }
@@ -1091,7 +1633,7 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
                     this.updateMeetingStatus('ended', '✅ Reunião finalizada');
                     this.addMessageToChat(`🎉 ${response.message}`, 'ai');
                     this.hideMeetingControls();
-                    
+
                     // Mostrar estatísticas
                     const stats = response.statistics;
                     this.addMessageToChat(`📊 **Estatísticas da Reunião:**
@@ -1132,13 +1674,12 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
                             </div>
                         </div>
                         <div class="text-right">
-                            <span class="inline-block px-2 py-1 text-xs rounded ${
-                                meeting.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                meeting.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                                'bg-gray-100 text-gray-800'
-                            }">
+                            <span class="inline-block px-2 py-1 text-xs rounded ${meeting.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    meeting.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                }">
                                 ${meeting.status === 'completed' ? '✅ Finalizada' :
-                                  meeting.status === 'active' ? '🔴 Ativa' : '⏸️ Pausada'}
+                    meeting.status === 'active' ? '🔴 Ativa' : '⏸️ Pausada'}
                             </span>
                             <div class="text-xs text-gray-500 mt-1">
                                 👥 ${meeting.participants_count} participantes
@@ -1150,11 +1691,11 @@ Acesse as configurações para personalizar sua experiência.`, 'ai');
                         <button onclick="iaon.viewMeetingDetails(${meeting.id})" class="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
                             Ver Detalhes
                         </button>
-                        ${meeting.agenda_generated ? 
-                            `<button onclick="iaon.viewMeetingAgenda(${meeting.id})" class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                        ${meeting.agenda_generated ?
+                    `<button onclick="iaon.viewMeetingAgenda(${meeting.id})" class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
                                 Ver Pauta
                             </button>` : ''
-                        }
+                }
                     </div>
                 </div>
             `).join('');

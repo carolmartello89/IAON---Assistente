@@ -26,10 +26,17 @@ CORS(app,
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      supports_credentials=True)
 
-# Configuração do banco de dados (SQLite para desenvolvimento)
-database_path = os.path.join(os.path.dirname(__file__), 'database', 'iaon.db')
-os.makedirs(os.path.dirname(database_path), exist_ok=True)
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path}"
+# Configuração do banco de dados
+# Para Vercel (produção) usa SQLite em memória, para desenvolvimento usa arquivo
+if os.getenv('FLASK_ENV') == 'production':
+    # Banco de dados em memória para Vercel (serverless)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+else:
+    # Banco de dados em arquivo para desenvolvimento local
+    database_path = os.path.join(os.path.dirname(__file__), 'database', 'iaon.db')
+    os.makedirs(os.path.dirname(database_path), exist_ok=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path}"
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,

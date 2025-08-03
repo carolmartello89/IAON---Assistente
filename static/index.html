@@ -71,15 +71,33 @@
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            z-index: 1000;
+            z-index: 40;
         }
 
         .sidebar {
             transition: transform 0.3s ease-in-out;
+            z-index: 30;
         }
 
         .sidebar-hidden {
             transform: translateX(-100%);
+        }
+
+        /* Z-index hierarchy */
+        #login-screen {
+            z-index: 60;
+        }
+
+        #loading-screen {
+            z-index: 55;
+        }
+
+        #onboarding-modal {
+            z-index: 50;
+        }
+
+        #main-app {
+            z-index: 10;
         }
 
         .loading-dots {
@@ -238,19 +256,59 @@
             </div>
         </div>
     </div>
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 gradient-bg flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-black mb-2 iaon-logo">IAON</h1>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Assistente IA Avançado</h2>
+                <p class="text-gray-600">Entre na sua conta para continuar</p>
+            </div>
+
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Usuário ou Email</label>
+                    <input type="text" id="login-username" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Digite seu usuário ou email">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                    <input type="password" id="login-password" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Digite sua senha">
+                </div>
+
+                <button type="submit" id="login-btn"
+                    class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                    🔐 Entrar
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <button id="demo-login" onclick="iaon.loginAsDemo()"
+                    class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    Entrar como Demo (sem cadastro)
+                </button>
+            </div>
+
+            <div class="mt-4 text-center">
+                <a href="#" class="text-sm text-gray-600 hover:text-gray-800">Esqueceu a senha?</a>
+                <span class="mx-2 text-gray-400">|</span>
+                <a href="#" class="text-sm text-gray-600 hover:text-gray-800">Criar conta</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 gradient-bg flex items-center justify-center z-50">
+    <div id="loading-screen" class="fixed inset-0 gradient-bg flex items-center justify-center z-50 hidden">
         <div class="text-center text-white">
             <div class="w-20 h-20 mx-auto mb-6 border-4 border-white border-t-transparent rounded-full animate-spin">
             </div>
             <h1 class="text-4xl font-black mb-2 iaon-logo text-white">IAON</h1>
             <h2 class="text-xl font-bold mb-2">Assistente IA Avançado</h2>
-            <p class="text-lg opacity-90">Inicializando sistemas inteligentes...</p>
-            <div class="mt-4 flex justify-center space-x-2">
-                <div class="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                <div class="w-2 h-2 bg-white rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                <div class="w-2 h-2 bg-white rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-            </div>
+            <p class="text-lg opacity-90">Carregando sua conta...</p>
         </div>
     </div>
 
@@ -405,175 +463,181 @@
                                     <input type="text" id="chat-input"
                                         placeholder="Digite sua mensagem ou diga 'IA' para usar voz..."
                                         class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <button id="send-message"
+                                    <button id="send-button"
                                         class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                                         <i data-lucide="send" class="w-5 h-5"></i>
                                     </button>
-                                    <button id="voice-toggle"
-                                        class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
-                                        <i data-lucide="mic" class="w-5 h-5"></i>
-                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
-
-                <!-- Medical Section -->
-                <section id="medical-section" class="section hidden p-6">
-                    <div class="max-w-6xl mx-auto">
-                        <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="heart-pulse" class="w-8 h-8 mr-3 text-red-500"></i>
-                            Sistema Médico Avançado
-                        </h2>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <!-- Medication Search -->
-                            <div class="bg-white p-6 rounded-lg shadow-lg">
-                                <h3 class="text-xl font-semibold mb-4 flex items-center">
-                                    <i data-lucide="pill" class="w-6 h-6 mr-2 text-blue-500"></i>
-                                    Buscar Medicamentos
-                                </h3>
-                                <input type="text" id="medication-search" placeholder="Nome do medicamento..."
-                                    class="w-full p-3 border border-gray-300 rounded-lg mb-4">
-                                <button class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">
-                                    Buscar Informações
-                                </button>
-                            </div>
-
-                            <!-- Interaction Checker -->
-                            <div class="bg-white p-6 rounded-lg shadow-lg">
-                                <h3 class="text-xl font-semibold mb-4 flex items-center">
-                                    <i data-lucide="alert-triangle" class="w-6 h-6 mr-2 text-yellow-500"></i>
-                                    Verificar Interações
-                                </h3>
-                                <p class="text-gray-600 mb-4">Verifique interações entre medicamentos, alimentos e
-                                    condições médicas.</p>
-                                <button class="w-full bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600">
-                                    Verificar Segurança
-                                </button>
-                            </div>
-
-                            <!-- Emergency Info -->
-                            <div class="bg-white p-6 rounded-lg shadow-lg">
-                                <h3 class="text-xl font-semibold mb-4 flex items-center">
-                                    <i data-lucide="phone" class="w-6 h-6 mr-2 text-red-500"></i>
-                                    Emergência
-                                </h3>
-                                <div class="space-y-2 text-sm">
-                                    <p><strong>SAMU:</strong> 192</p>
-                                    <p><strong>Bombeiros:</strong> 193</p>
-                                    <p><strong>Centro de Intoxicações:</strong> 0800 722 6001</p>
-                                    <p><strong>Polícia:</strong> 190</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Voice Biometry Section -->
-                <section id="voice-biometry-section" class="section hidden p-6">
-                    <div class="max-w-4xl mx-auto">
-                        <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="mic" class="w-8 h-8 mr-3 text-purple-500"></i>
-                            Biometria de Voz
-                        </h2>
-
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <div class="text-center mb-8">
-                                <div id="biometry-status"
-                                    class="w-32 h-32 mx-auto mb-4 rounded-full border-4 border-gray-300 flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100">
-                                    <i data-lucide="mic" class="w-16 h-16 text-purple-500"></i>
-                                </div>
-                                <h3 class="text-xl font-semibold mb-2">Configurar Biometria de Voz</h3>
-                                <p class="text-gray-600">Configure sua voz para comandos seguros e personalizados</p>
-                            </div>
-
-                            <div class="space-y-4">
-                                <button id="start-enrollment"
-                                    class="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 transition-colors flex items-center justify-center">
-                                    <i data-lucide="mic" class="w-5 h-5 mr-2"></i>
-                                    Iniciar Cadastro de Voz
-                                </button>
-
-                                <button id="test-voice"
-                                    class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center">
-                                    <i data-lucide="volume-2" class="w-5 h-5 mr-2"></i>
-                                    Testar Reconhecimento
-                                </button>
-
-                                <button id="reset-biometry"
-                                    class="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center">
-                                    <i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i>
-                                    Resetar Biometria
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Other sections placeholder -->
-                <section id="calendar-section" class="section hidden p-6">
-                    <div class="max-w-6xl mx-auto">
-                        <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="calendar" class="w-8 h-8 mr-3 text-green-500"></i>
-                            Agenda Inteligente
-                        </h2>
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <p class="text-gray-600 text-center">🚧 Sistema de agenda em desenvolvimento...</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="finance-section" class="section hidden p-6">
-                    <div class="max-w-6xl mx-auto">
-                        <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="dollar-sign" class="w-8 h-8 mr-3 text-yellow-500"></i>
-                            Controle Financeiro
-                        </h2>
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <p class="text-gray-600 text-center">🚧 Sistema financeiro em desenvolvimento...</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="contacts-section" class="section hidden p-6">
-                    <div class="max-w-6xl mx-auto">
-                        <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="users" class="w-8 h-8 mr-3 text-blue-500"></i>
-                            Gestão de Contatos
-                        </h2>
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <p class="text-gray-600 text-center">🚧 Sistema de contatos em desenvolvimento...</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="analytics-section" class="section hidden p-6">
-                    <div class="max-w-6xl mx-auto">
-                        <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="bar-chart-3" class="w-8 h-8 mr-3 text-indigo-500"></i>
-                            Analytics e Relatórios
-                        </h2>
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <p class="text-gray-600 text-center">🚧 Sistema de analytics em desenvolvimento...</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="settings-section" class="section hidden p-6">
-                    <div class="max-w-6xl mx-auto">
-                        <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="settings" class="w-8 h-8 mr-3 text-gray-500"></i>
-                            Configurações
-                        </h2>
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <p class="text-gray-600 text-center">🚧 Configurações do sistema em desenvolvimento...</p>
-                        </div>
-                    </div>
-                </section>
-            </main>
+                </button>
+                <button id="voice-toggle"
+                    class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                    <i data-lucide="mic" class="w-5 h-5"></i>
+                </button>
         </div>
+    </div>
+    </div>
+    </div>
+    </section>
+
+    <!-- Medical Section -->
+    <section id="medical-section" class="section hidden p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="heart-pulse" class="w-8 h-8 mr-3 text-red-500"></i>
+                Sistema Médico Avançado
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Medication Search -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i data-lucide="pill" class="w-6 h-6 mr-2 text-blue-500"></i>
+                        Buscar Medicamentos
+                    </h3>
+                    <input type="text" id="medication-search" placeholder="Nome do medicamento..."
+                        class="w-full p-3 border border-gray-300 rounded-lg mb-4">
+                    <button class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">
+                        Buscar Informações
+                    </button>
+                </div>
+
+                <!-- Interaction Checker -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i data-lucide="alert-triangle" class="w-6 h-6 mr-2 text-yellow-500"></i>
+                        Verificar Interações
+                    </h3>
+                    <p class="text-gray-600 mb-4">Verifique interações entre medicamentos, alimentos e
+                        condições médicas.</p>
+                    <button class="w-full bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600">
+                        Verificar Segurança
+                    </button>
+                </div>
+
+                <!-- Emergency Info -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i data-lucide="phone" class="w-6 h-6 mr-2 text-red-500"></i>
+                        Emergência
+                    </h3>
+                    <div class="space-y-2 text-sm">
+                        <p><strong>SAMU:</strong> 192</p>
+                        <p><strong>Bombeiros:</strong> 193</p>
+                        <p><strong>Centro de Intoxicações:</strong> 0800 722 6001</p>
+                        <p><strong>Polícia:</strong> 190</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Voice Biometry Section -->
+    <section id="voice-biometry-section" class="section hidden p-6">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="mic" class="w-8 h-8 mr-3 text-purple-500"></i>
+                Biometria de Voz
+            </h2>
+
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="text-center mb-8">
+                    <div id="biometry-status"
+                        class="w-32 h-32 mx-auto mb-4 rounded-full border-4 border-gray-300 flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100">
+                        <i data-lucide="mic" class="w-16 h-16 text-purple-500"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Configurar Biometria de Voz</h3>
+                    <p class="text-gray-600">Configure sua voz para comandos seguros e personalizados</p>
+                </div>
+
+                <div class="space-y-4">
+                    <button id="start-enrollment"
+                        class="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 transition-colors flex items-center justify-center">
+                        <i data-lucide="mic" class="w-5 h-5 mr-2"></i>
+                        Iniciar Cadastro de Voz
+                    </button>
+
+                    <button id="test-voice"
+                        class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center">
+                        <i data-lucide="volume-2" class="w-5 h-5 mr-2"></i>
+                        Testar Reconhecimento
+                    </button>
+
+                    <button id="reset-biometry"
+                        class="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center">
+                        <i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i>
+                        Resetar Biometria
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Other sections placeholder -->
+    <section id="calendar-section" class="section hidden p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="calendar" class="w-8 h-8 mr-3 text-green-500"></i>
+                Agenda Inteligente
+            </h2>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <p class="text-gray-600 text-center">🚧 Sistema de agenda em desenvolvimento...</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="finance-section" class="section hidden p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="dollar-sign" class="w-8 h-8 mr-3 text-yellow-500"></i>
+                Controle Financeiro
+            </h2>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <p class="text-gray-600 text-center">🚧 Sistema financeiro em desenvolvimento...</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contacts-section" class="section hidden p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="users" class="w-8 h-8 mr-3 text-blue-500"></i>
+                Gestão de Contatos
+            </h2>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <p class="text-gray-600 text-center">🚧 Sistema de contatos em desenvolvimento...</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="analytics-section" class="section hidden p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="bar-chart-3" class="w-8 h-8 mr-3 text-indigo-500"></i>
+                Analytics e Relatórios
+            </h2>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <p class="text-gray-600 text-center">🚧 Sistema de analytics em desenvolvimento...</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="settings-section" class="section hidden p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="settings" class="w-8 h-8 mr-3 text-gray-500"></i>
+                Configurações
+            </h2>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <p class="text-gray-600 text-center">🚧 Configurações do sistema em desenvolvimento...</p>
+            </div>
+        </div>
+    </section>
+    </main>
+    </div>
     </div>
 
     <!-- Floating Voice Button -->
@@ -584,20 +648,6 @@
 
     <!-- Scripts -->
     <script src="/static/js/main.js"></script>
-
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-
-        // Initialize app when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function () {
-            // Hide loading screen after 3 seconds
-            setTimeout(() => {
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-            }, 3000);
-        });
-    </script>
 </body>
 
 </html>

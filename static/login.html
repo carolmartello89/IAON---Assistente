@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAON - Login Seguro</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .auth-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-bottom: 20px;
+        }
+
+        .auth-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .auth-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid #d63031;
+        }
+
+        .success-message {
+            background: #e6ffe6;
+            color: #00b894;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid #00b894;
+        }
+
+        .security-features {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .security-features h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .security-features ul {
+            list-style: none;
+        }
+
+        .security-features li {
+            padding: 5px 0;
+            color: #666;
+        }
+
+        .security-features li:before {
+            content: "🔒 ";
+            margin-right: 10px;
+        }
+
+        .demo-access {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+        }
+
+        .demo-access h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .demo-access p {
+            color: #856404;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .demo-button {
+            background: #fdcb6e;
+            color: #856404;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            .logo h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>🛡️ IAON</h1>
+            <p>Sistema de Proteção 24/7</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchTab('login')">Entrar</button>
+            <button class="auth-tab" onclick="switchTab('register')">Registrar</button>
+        </div>
+
+        <div id="error-message" class="error-message"></div>
+        <div id="success-message" class="success-message"></div>
+
+        <!-- Formulário de Login -->
+        <form id="login-form" class="auth-form active">
+            <div class="form-group">
+                <label for="login-email">Email:</label>
+                <input type="email" id="login-email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Senha:</label>
+                <input type="password" id="login-password" required>
+            </div>
+            <button type="submit" class="auth-button">🔐 Entrar no IAON</button>
+        </form>
+
+        <!-- Formulário de Registro -->
+        <form id="register-form" class="auth-form">
+            <div class="form-group">
+                <label for="register-name">Nome Completo:</label>
+                <input type="text" id="register-name" required>
+            </div>
+            <div class="form-group">
+                <label for="register-email">Email:</label>
+                <input type="email" id="register-email" required>
+            </div>
+            <div class="form-group">
+                <label for="register-password">Senha:</label>
+                <input type="password" id="register-password" required minlength="6">
+            </div>
+            <div class="form-group">
+                <label for="register-confirm">Confirmar Senha:</label>
+                <input type="password" id="register-confirm" required>
+            </div>
+            <button type="submit" class="auth-button">🚀 Criar Conta</button>
+        </form>
+
+        <!-- Acesso Demo -->
+        <div class="demo-access">
+            <h4>🎯 Acesso Demo</h4>
+            <p>Teste o sistema sem cadastro (funcionalidade limitada)</p>
+            <button class="demo-button" onclick="accessDemo()">Acessar Demo</button>
+        </div>
+
+        <!-- Recursos de Segurança -->
+        <div class="security-features">
+            <h3>🔒 Segurança IAON</h3>
+            <ul>
+                <li>Criptografia end-to-end</li>
+                <li>Biometria de voz avançada</li>
+                <li>Monitoramento 24/7</li>
+                <li>Alertas de emergência instantâneos</li>
+                <li>Proteção contra sequestro</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            // Atualizar tabs
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + '-form').classList.add('active');
+            
+            clearMessages();
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            document.getElementById('success-message').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success-message');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        function clearMessages() {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+        }
+
+        // Login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSuccess('Login realizado com sucesso! Redirecionando...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    showError(data.message || 'Erro no login');
+                }
+            } catch (error) {
+                showError('Erro de conexão. Tente novamente.');
+            }
+        });
+
+        // Registro
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-confirm').value;
+            
+            if (password !== confirm) {
+                showError('As senhas não coincidem');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSuccess('Conta criada com sucesso! Fazendo login...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    showError(data.message || 'Erro no registro');
+                }
+            } catch (error) {
+                showError('Erro de conexão. Tente novamente.');
+            }
+        });
+
+        // Acesso Demo
+        function accessDemo() {
+            if (confirm('Acessar em modo demo? Algumas funcionalidades estarão limitadas.')) {
+                fetch('/api/auth/demo', { method: 'POST' })
+                .then(() => {
+                    window.location.href = '/?demo=true';
+                });
+            }
+        }
+
+        // Verificar se já está logado
+        fetch('/api/auth/check')
+        .then(response => response.json())
+        .then(data => {
+            if (data.authenticated) {
+                window.location.href = '/';
+            }
+        })
+        .catch(() => {
+            // Usuário não logado, continua na tela de login
+        });
+    </script>
+</body>
+</html>

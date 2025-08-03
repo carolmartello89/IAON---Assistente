@@ -13,6 +13,9 @@ from email.mime.multipart import MIMEMultipart
 import sqlite3
 import uuid
 import random
+import hashlib
+import secrets
+from functools import wraps
 
 app = Flask(__name__, static_folder='static', template_folder='static')
 app.secret_key = 'iaon_production_secret_key_2025'
@@ -46,6 +49,31 @@ logger = logging.getLogger(__name__)
 def init_emergency_database():
     conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
     cursor = conn.cursor()
+    
+    # Tabela de usuários
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            last_login DATETIME,
+            is_demo BOOLEAN DEFAULT FALSE
+        )
+    ''')
+    
+    # Tabela de sessões
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            expires_at DATETIME NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
     
     # Tabela de alertas de emergência
     cursor.execute('''
@@ -121,15 +149,285 @@ except Exception as e:
 # Inicializar sistema na startup
 init_emergency_database()
 
+# ===============================
+# SISTEMA DE AUTENTICAÇÃO
+# ===============================
+
+def hash_password(password):
+    """Hash da senha com salt"""
+    salt = secrets.token_hex(16)
+    password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
+    return salt + password_hash.hex()
+
+def verify_password(password, hashed):
+    """Verificar senha"""
+    salt = hashed[:32]
+    stored_hash = hashed[32:]
+    password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
+    return password_hash.hex() == stored_hash
+
+def create_session(user_id):
+    """Criar sessão de usuário"""
+    session_id = str(uuid.uuid4())
+    expires_at = datetime.now() + timedelta(days=30)
+    
+    conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO user_sessions (id, user_id, created_at, expires_at)
+        VALUES (?, ?, ?, ?)
+    ''', (session_id, user_id, datetime.now(), expires_at))
+    
+    conn.commit()
+    conn.close()
+    
+    return session_id
+
+def verify_session(session_id):
+    """Verificar sessão válida"""
+    if not session_id:
+        return None
+    
+    conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT user_id FROM user_sessions 
+        WHERE id = ? AND expires_at > ? AND is_active = TRUE
+    ''', (session_id, datetime.now()))
+    
+    result = cursor.fetchone()
+    conn.close()
+    
+    return result[0] if result else None
+
+def require_auth(f):
+    """Decorator para rotas que requerem autenticação"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        session_id = session.get('session_id')
+        user_id = verify_session(session_id)
+        
+        if not user_id:
+            return jsonify({'error': 'Acesso negado - Login necessário'}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_current_user():
+    """Obter usuário atual da sessão"""
+    session_id = session.get('session_id')
+    user_id = verify_session(session_id)
+    
+    if not user_id:
+        return None
+    
+    conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT id, name, email, is_demo FROM users WHERE id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        return {
+            'id': result[0],
+            'name': result[1],
+            'email': result[2],
+            'is_demo': bool(result[3])
+        }
+    return None
+
 @app.route('/')
 def index():
     """Página principal com sistema de monitoramento integrado"""
+    # Verificar autenticação
+    user = get_current_user()
+    if not user and not request.args.get('demo'):
+        return render_template('login.html')
+    
     return render_template('index.html')
+
+@app.route('/login')
+def login_page():
+    """Página de login"""
+    return render_template('login.html')
 
 @app.route('/viral')
 def viral():
     """Página viral para atrair usuários"""
     return render_template('viral.html')
+
+# ===============================
+# APIS DE AUTENTICAÇÃO
+# ===============================
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Registrar novo usuário"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        if not name or not email or not password:
+            return jsonify({'message': 'Todos os campos são obrigatórios'}), 400
+        
+        if len(password) < 6:
+            return jsonify({'message': 'Senha deve ter pelo menos 6 caracteres'}), 400
+        
+        # Verificar se email já existe
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT id FROM users WHERE email = ?', (email,))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'message': 'Email já cadastrado'}), 400
+        
+        # Criar usuário
+        user_id = str(uuid.uuid4())
+        password_hash = hash_password(password)
+        
+        cursor.execute('''
+            INSERT INTO users (id, name, email, password_hash, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, name, email, password_hash, datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        
+        # Criar sessão
+        session_id = create_session(user_id)
+        session['session_id'] = session_id
+        
+        logger.info(f"Novo usuário registrado: {name} ({email})")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Usuário criado com sucesso',
+            'user': {'id': user_id, 'name': name, 'email': email}
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro no registro: {str(e)}")
+        return jsonify({'message': 'Erro interno do servidor'}), 500
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login de usuário"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        if not email or not password:
+            return jsonify({'message': 'Email e senha são obrigatórios'}), 400
+        
+        # Buscar usuário
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT id, name, password_hash FROM users WHERE email = ?', (email,))
+        user = cursor.fetchone()
+        
+        if not user or not verify_password(password, user[2]):
+            conn.close()
+            return jsonify({'message': 'Email ou senha incorretos'}), 401
+        
+        user_id, name = user[0], user[1]
+        
+        # Atualizar último login
+        cursor.execute('UPDATE users SET last_login = ? WHERE id = ?', (datetime.now(), user_id))
+        conn.commit()
+        conn.close()
+        
+        # Criar sessão
+        session_id = create_session(user_id)
+        session['session_id'] = session_id
+        
+        logger.info(f"Login realizado: {name} ({email})")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Login realizado com sucesso',
+            'user': {'id': user_id, 'name': name, 'email': email}
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro no login: {str(e)}")
+        return jsonify({'message': 'Erro interno do servidor'}), 500
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    """Logout do usuário"""
+    try:
+        session_id = session.get('session_id')
+        
+        if session_id:
+            # Desativar sessão
+            conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+            cursor = conn.cursor()
+            cursor.execute('UPDATE user_sessions SET is_active = FALSE WHERE id = ?', (session_id,))
+            conn.commit()
+            conn.close()
+        
+        session.clear()
+        
+        return jsonify({'status': 'success', 'message': 'Logout realizado com sucesso'})
+        
+    except Exception as e:
+        logger.error(f"Erro no logout: {str(e)}")
+        return jsonify({'message': 'Erro interno do servidor'}), 500
+
+@app.route('/api/auth/check', methods=['GET'])
+def check_auth():
+    """Verificar se usuário está autenticado"""
+    user = get_current_user()
+    
+    if user:
+        return jsonify({
+            'authenticated': True,
+            'user': user
+        })
+    else:
+        return jsonify({'authenticated': False}), 401
+
+@app.route('/api/auth/demo', methods=['POST'])
+def demo_access():
+    """Acesso demo temporário"""
+    try:
+        # Criar usuário demo temporário
+        demo_id = f"demo_{str(uuid.uuid4())[:8]}"
+        
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO users (id, name, email, password_hash, created_at, is_demo)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (demo_id, 'Usuário Demo', f'demo_{demo_id}@iaon.demo', 'demo', datetime.now(), True))
+        
+        conn.commit()
+        conn.close()
+        
+        # Criar sessão demo (expira em 1 hora)
+        session_id = create_session(demo_id)
+        session['session_id'] = session_id
+        
+        logger.info(f"Acesso demo criado: {demo_id}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Acesso demo ativado',
+            'demo': True
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro no acesso demo: {str(e)}")
+        return jsonify({'message': 'Erro interno do servidor'}), 500
 
 # ===============================
 # APIS VIRAIS (FUNCIONAIS)
@@ -326,6 +624,7 @@ def daily_fortune():
 # ===============================
 
 @app.route('/api/emergency/kidnapping', methods=['POST'])
+@require_auth
 def handle_kidnapping_alert():
     """API de produção para alertas de sequestro"""
     try:
@@ -373,6 +672,7 @@ def handle_kidnapping_alert():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/emergency/home-invasion', methods=['POST'])
+@require_auth
 def handle_home_invasion_alert():
     """API de produção para alertas de invasão domiciliar"""
     try:
@@ -814,6 +1114,7 @@ def onboarding_status():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/onboarding/complete', methods=['POST'])
+@require_auth
 def complete_onboarding():
     """Completar o onboarding do usuário"""
     try:
@@ -848,6 +1149,7 @@ def complete_onboarding():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/voice-biometry/advanced-enroll', methods=['POST'])
+@require_auth
 def voice_biometry_enroll():
     """Cadastrar biometria de voz avançada"""
     try:

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IAON - Ferramentas Gratuitas que Salvam Vidas + Muito Mais!">
+    <meta name="theme-color" content="#8b5cf6">
+    <title>🎯 IAON - Seu Assistente IA GRATUITO + Sistema que Salva Vidas</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+        .viral-gradient {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+        }
+
+        .success-gradient {
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+        }
+
+        .warning-gradient {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+        }
+
+        .emergency-gradient {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .pulse-effect {
+            animation: pulse 2s infinite;
+        }
+
+        .bounce-effect {
+            animation: bounce 1s infinite;
+        }
+
+        .float-effect {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Hero Section -->
+    <section class="viral-gradient min-h-screen flex items-center justify-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-30"></div>
+
+        <!-- Floating Elements -->
+        <div class="absolute top-20 left-10 w-20 h-20 bg-yellow-400 rounded-full opacity-20 float-effect"></div>
+        <div class="absolute top-40 right-20 w-16 h-16 bg-pink-400 rounded-full opacity-20 float-effect"
+            style="animation-delay: 1s;"></div>
+        <div class="absolute bottom-40 left-20 w-12 h-12 bg-green-400 rounded-full opacity-20 float-effect"
+            style="animation-delay: 2s;"></div>
+
+        <div class="container mx-auto px-6 text-center relative z-10">
+            <div class="max-w-4xl mx-auto">
+                <!-- Main Title -->
+                <h1 class="text-6xl md:text-8xl font-black mb-6 leading-tight">
+                    <span class="text-yellow-300">🎯</span> IAON
+                    <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-pink-300">
+                        SEU NOVO VÍCIO
+                    </span>
+                </h1>
+
+                <p class="text-xl md:text-2xl mb-8 text-gray-200">
+                    🚀 O app que TODO MUNDO está baixando! <br>
+                    <span class="text-yellow-300 font-bold">+50 ferramentas GRATUITAS</span> que você vai usar TODOS os
+                    dias
+                </p>
+
+                <!-- Benefits Cards -->
+                <div class="grid md:grid-cols-3 gap-6 mb-12">
+                    <div class="glass-effect rounded-2xl p-6 card-hover">
+                        <div class="text-4xl mb-4">🎮</div>
+                        <h3 class="text-xl font-bold mb-2">Jogos Mentais</h3>
+                        <p class="text-gray-300">Quebra-cabeças, memória, QI - viciante!</p>
+                    </div>
+
+                    <div class="glass-effect rounded-2xl p-6 card-hover">
+                        <div class="text-4xl mb-4">🎵</div>
+                        <h3 class="text-xl font-bold mb-2">Música & Humor</h3>
+                        <p class="text-gray-300">Playlists por IA baseadas no seu humor</p>
+                    </div>
+
+                    <div class="glass-effect rounded-2xl p-6 card-hover">
+                        <div class="text-4xl mb-4">💝</div>
+                        <h3 class="text-xl font-bold mb-2">Relacionamentos</h3>
+                        <p class="text-gray-300">Dicas, testes, compatibilidade</p>
+                    </div>
+                </div>
+
+                <!-- CTA Buttons -->
+                <div class="space-y-4">
+                    <button onclick="startViralExperience()"
+                        class="success-gradient text-white px-12 py-4 rounded-full text-xl font-bold pulse-effect glow-effect hover:scale-105 transition-all">
+                        🚀 EXPERIMENTAR GRÁTIS AGORA
+                    </button>
+
+                    <div class="text-sm text-gray-300">
+                        ⚡ Sem cadastro • Sem cartão • Sem pegadinha
+                    </div>
+                </div>
+
+                <!-- Emergency Notice -->
+                <div class="mt-16 p-4 emergency-gradient rounded-xl border border-red-300">
+                    <p class="text-sm">
+                        🆘 <strong>ATENÇÃO:</strong> Este app também possui sistema de prevenção ao suicídio 100%
+                        gratuito
+                        <br><a href="/emergency" class="text-yellow-300 underline">Clique aqui se precisar de ajuda
+                            AGORA</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Preview -->
+    <section class="py-20 bg-gray-800">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-black text-center mb-16">
+                🎯 Por que TODO MUNDO está baixando?
+            </h2>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Viral Feature 1: Daily Challenge -->
+                <div class="bg-gray-700 rounded-2xl p-6 card-hover">
+                    <div class="text-4xl mb-4 text-center">🏆</div>
+                    <h3 class="text-xl font-bold mb-3 text-center">Desafio Diário</h3>
+                    <p class="text-gray-300 text-center mb-4">Novo quebra-cabeça todo dia. Vicia mesmo!</p>
+                    <div class="bg-yellow-400 text-black px-4 py-2 rounded-full text-sm font-bold text-center">
+                        GRATUITO SEMPRE
+                    </div>
+                </div>
+
+                <!-- Viral Feature 2: Mood Music -->
+                <div class="bg-gray-700 rounded-2xl p-6 card-hover">
+                    <div class="text-4xl mb-4 text-center">🎧</div>
+                    <h3 class="text-xl font-bold mb-3 text-center">Música do Humor</h3>
+                    <p class="text-gray-300 text-center mb-4">IA cria playlist perfeita pro seu dia</p>
+                    <div class="bg-pink-400 text-white px-4 py-2 rounded-full text-sm font-bold text-center">
+                        IA AVANÇADA
+                    </div>
+                </div>
+
+                <!-- Viral Feature 3: Love Calculator -->
+                <div class="bg-gray-700 rounded-2xl p-6 card-hover">
+                    <div class="text-4xl mb-4 text-center">💕</div>
+                    <h3 class="text-xl font-bold mb-3 text-center">Calculadora do Amor</h3>
+                    <p class="text-gray-300 text-center mb-4">Compatibilidade real usando IA</p>
+                    <div class="bg-red-400 text-white px-4 py-2 rounded-full text-sm font-bold text-center">
+                        VIRAL NO TIK TOK
+                    </div>
+                </div>
+
+                <!-- Viral Feature 4: Fortune Teller -->
+                <div class="bg-gray-700 rounded-2xl p-6 card-hover">
+                    <div class="text-4xl mb-4 text-center">🔮</div>
+                    <h3 class="text-xl font-bold mb-3 text-center">Previsões IA</h3>
+                    <p class="text-gray-300 text-center mb-4">Horóscopo personalizado diário</p>
+                    <div class="bg-purple-400 text-white px-4 py-2 rounded-full text-sm font-bold text-center">
+                        SUPER PRECISO
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Demo -->
+    <section class="py-20 bg-gray-900">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-black text-center mb-16">
+                🎮 Experimente AGORA (sem baixar)
+            </h2>
+
+            <!-- Demo Tabs -->
+            <div class="max-w-4xl mx-auto">
+                <div class="flex flex-wrap justify-center mb-8 space-x-4">
+                    <button onclick="showDemo('challenge')" id="tab-challenge"
+                        class="demo-tab active bg-purple-600 text-white px-6 py-3 rounded-full font-bold mb-2">
+                        🧩 Desafio Mental
+                    </button>
+                    <button onclick="showDemo('music')" id="tab-music"
+                        class="demo-tab bg-gray-700 text-gray-300 px-6 py-3 rounded-full font-bold mb-2">
+                        🎵 Música IA
+                    </button>
+                    <button onclick="showDemo('love')" id="tab-love"
+                        class="demo-tab bg-gray-700 text-gray-300 px-6 py-3 rounded-full font-bold mb-2">
+                        💕 Teste Amor
+                    </button>
+                    <button onclick="showDemo('fortune')" id="tab-fortune"
+                        class="demo-tab bg-gray-700 text-gray-300 px-6 py-3 rounded-full font-bold mb-2">
+                        🔮 Previsões
+                    </button>
+                </div>
+
+                <!-- Demo Content -->
+                <div class="bg-gray-800 rounded-2xl p-8">
+                    <!-- Challenge Demo -->
+                    <div id="demo-challenge" class="demo-content">
+                        <h3 class="text-2xl font-bold mb-6 text-center">🧩 Desafio Mental do Dia</h3>
+                        <div class="bg-gray-700 rounded-xl p-6 mb-6">
+                            <p class="text-lg mb-4 text-center">Se você tem 6 fósforos, como fazer 4 triângulos?</p>
+                            <div class="flex justify-center space-x-4 mb-4">
+                                <button onclick="showHint()"
+                                    class="bg-yellow-500 text-black px-4 py-2 rounded-full font-bold">💡 Dica</button>
+                                <button onclick="showAnswer()"
+                                    class="bg-green-500 text-white px-4 py-2 rounded-full font-bold">✅ Resposta</button>
+                            </div>
+                            <div id="hint-area" class="hidden text-center text-yellow-300"></div>
+                            <div id="answer-area" class="hidden text-center text-green-300"></div>
+                        </div>
+                        <p class="text-center text-gray-400">💡 Novo desafio todo dia • Ranking global • Conquistas</p>
+                    </div>
+
+                    <!-- Music Demo -->
+                    <div id="demo-music" class="demo-content hidden">
+                        <h3 class="text-2xl font-bold mb-6 text-center">🎵 Música Baseada no Humor</h3>
+                        <div class="bg-gray-700 rounded-xl p-6 mb-6">
+                            <p class="text-lg mb-4 text-center">Como você está se sentindo hoje?</p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <button onclick="generatePlaylist('happy')"
+                                    class="bg-yellow-500 text-black px-4 py-2 rounded-full font-bold">😊 Feliz</button>
+                                <button onclick="generatePlaylist('sad')"
+                                    class="bg-blue-500 text-white px-4 py-2 rounded-full font-bold">😢 Triste</button>
+                                <button onclick="generatePlaylist('energetic')"
+                                    class="bg-red-500 text-white px-4 py-2 rounded-full font-bold">⚡ Energético</button>
+                                <button onclick="generatePlaylist('calm')"
+                                    class="bg-green-500 text-white px-4 py-2 rounded-full font-bold">😌 Calmo</button>
+                            </div>
+                            <div id="playlist-result" class="text-center text-purple-300"></div>
+                        </div>
+                        <p class="text-center text-gray-400">🎧 IA analisa seu humor • Spotify/YouTube • Descoberta
+                            musical</p>
+                    </div>
+
+                    <!-- Love Demo -->
+                    <div id="demo-love" class="demo-content hidden">
+                        <h3 class="text-2xl font-bold mb-6 text-center">💕 Calculadora do Amor</h3>
+                        <div class="bg-gray-700 rounded-xl p-6 mb-6">
+                            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                                <input id="name1" type="text" placeholder="Seu nome"
+                                    class="bg-gray-600 text-white px-4 py-2 rounded-full">
+                                <input id="name2" type="text" placeholder="Nome da paixão"
+                                    class="bg-gray-600 text-white px-4 py-2 rounded-full">
+                            </div>
+                            <button onclick="calculateLove()"
+                                class="w-full bg-pink-500 text-white px-4 py-3 rounded-full font-bold mb-4">
+                                💖 CALCULAR COMPATIBILIDADE
+                            </button>
+                            <div id="love-result" class="text-center text-pink-300"></div>
+                        </div>
+                        <p class="text-center text-gray-400">💘 Análise de personalidade • Dicas de relacionamento •
+                            Compartilhar no TikTok</p>
+                    </div>
+
+                    <!-- Fortune Demo -->
+                    <div id="demo-fortune" class="demo-content hidden">
+                        <h3 class="text-2xl font-bold mb-6 text-center">🔮 Previsões do Dia</h3>
+                        <div class="bg-gray-700 rounded-xl p-6 mb-6">
+                            <p class="text-lg mb-4 text-center">Escolha sua pergunta:</p>
+                            <div class="grid gap-4 mb-4">
+                                <button onclick="getFortune('love')"
+                                    class="bg-pink-500 text-white px-4 py-2 rounded-full font-bold">💕 Amor</button>
+                                <button onclick="getFortune('work')"
+                                    class="bg-blue-500 text-white px-4 py-2 rounded-full font-bold">💼 Trabalho</button>
+                                <button onclick="getFortune('money')"
+                                    class="bg-green-500 text-white px-4 py-2 rounded-full font-bold">💰
+                                    Dinheiro</button>
+                                <button onclick="getFortune('health')"
+                                    class="bg-red-500 text-white px-4 py-2 rounded-full font-bold">🏥 Saúde</button>
+                            </div>
+                            <div id="fortune-result" class="text-center text-purple-300"></div>
+                        </div>
+                        <p class="text-center text-gray-400">🌟 IA personalizada • Baseado em dados reais • Compartilhar
+                            previsões</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof -->
+    <section class="py-20 bg-gray-800">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-black text-center mb-16">
+                🔥 O que estão falando
+            </h2>
+
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <div class="bg-gray-700 rounded-2xl p-6">
+                    <div class="flex items-center mb-4">
+                        <div
+                            class="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
+                            <span class="text-white font-bold">M</span>
+                        </div>
+                        <div class="ml-4">
+                            <div class="font-bold">Maria, 23</div>
+                            <div class="text-gray-400 text-sm">@maria_soul</div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300">"Gente, esse app é VICIANTE! Já estou no desafio 47 e não consigo parar. A
+                        playlist de hoje tá perfeita pro meu humor 😍"</p>
+                    <div class="text-yellow-400 text-sm mt-2">⭐⭐⭐⭐⭐</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-2xl p-6">
+                    <div class="flex items-center mb-4">
+                        <div
+                            class="w-12 h-12 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
+                            <span class="text-white font-bold">J</span>
+                        </div>
+                        <div class="ml-4">
+                            <div class="font-bold">João, 28</div>
+                            <div class="text-gray-400 text-sm">@joao_dev</div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300">"A calculadora do amor acertou TUDO sobre meu relacionamento. Como é
+                        possível uma IA ser tão precisa? Impressionante! 🤯"</p>
+                    <div class="text-yellow-400 text-sm mt-2">⭐⭐⭐⭐⭐</div>
+                </div>
+
+                <div class="bg-gray-700 rounded-2xl p-6">
+                    <div class="flex items-center mb-4">
+                        <div
+                            class="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center">
+                            <span class="text-white font-bold">A</span>
+                        </div>
+                        <div class="ml-4">
+                            <div class="font-bold">Ana, 31</div>
+                            <div class="text-gray-400 text-sm">@ana_life</div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300">"Baixei por causa dos jogos, mas acabei descobrindo que também tem sistema
+                        de ajuda emocional. Salvou minha vida literalmente. 🙏"</p>
+                    <div class="text-yellow-400 text-sm mt-2">⭐⭐⭐⭐⭐</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download CTA -->
+    <section class="py-20 viral-gradient">
+        <div class="container mx-auto px-6 text-center">
+            <h2 class="text-5xl font-black mb-6">
+                🚀 Baixe AGORA
+            </h2>
+            <p class="text-xl mb-8 text-gray-200">
+                Junte-se a <span class="text-yellow-300 font-bold">+100.000 pessoas</span> que já estão viciadas
+            </p>
+
+            <div class="max-w-md mx-auto">
+                <button onclick="downloadApp()"
+                    class="w-full success-gradient text-white px-8 py-4 rounded-full text-xl font-bold pulse-effect glow-effect hover:scale-105 transition-all mb-4">
+                    📱 BAIXAR GRÁTIS AGORA
+                </button>
+
+                <div class="text-sm text-gray-300 mb-8">
+                    ✅ Sem anúncios • ✅ Sem pegadinha • ✅ Tudo grátis para sempre
+                </div>
+
+                <!-- Emergency Link -->
+                <div class="p-4 emergency-gradient rounded-xl border border-red-300">
+                    <p class="text-sm">
+                        🆘 <strong>PRECISA DE AJUDA AGORA?</strong>
+                        <br><a href="/emergency" class="text-yellow-300 underline font-bold">Sistema de Prevenção ao
+                            Suicídio - GRATUITO</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Demo functionality
+        function showDemo(demoType) {
+            // Hide all demos
+            document.querySelectorAll('.demo-content').forEach(demo => {
+                demo.classList.add('hidden');
+            });
+
+            // Show selected demo
+            document.getElementById(`demo-${demoType}`).classList.remove('hidden');
+
+            // Update tab styles
+            document.querySelectorAll('.demo-tab').forEach(tab => {
+                tab.classList.remove('bg-purple-600', 'text-white');
+                tab.classList.add('bg-gray-700', 'text-gray-300');
+            });
+
+            document.getElementById(`tab-${demoType}`).classList.remove('bg-gray-700', 'text-gray-300');
+            document.getElementById(`tab-${demoType}`).classList.add('bg-purple-600', 'text-white');
+        }
+
+        // Challenge functions
+        function showHint() {
+            document.getElementById('hint-area').classList.remove('hidden');
+            document.getElementById('hint-area').innerHTML = '💡 Dica: Pense em 3D! Não precisa ser plano...';
+        }
+
+        function showAnswer() {
+            document.getElementById('answer-area').classList.remove('hidden');
+            document.getElementById('answer-area').innerHTML = '✅ Resposta: Faça uma pirâmide! Base triangular + 3 lados = 4 triângulos';
+        }
+
+        // Music generator
+        function generatePlaylist(mood) {
+            const playlists = {
+                happy: ['🎵 "Good as Hell" - Lizzo', '🎵 "Uptown Funk" - Bruno Mars', '🎵 "Happy" - Pharrell Williams'],
+                sad: ['🎵 "Someone Like You" - Adele', '🎵 "Hurt" - Johnny Cash', '🎵 "Mad World" - Gary Jules'],
+                energetic: ['🎵 "Till I Collapse" - Eminem', '🎵 "Stronger" - Kanye West', '🎵 "Eye of the Tiger" - Survivor'],
+                calm: ['🎵 "Weightless" - Marconi Union', '🎵 "Clair de Lune" - Debussy', '🎵 "River" - Joni Mitchell']
+            };
+
+            const moodEmojis = {
+                happy: '😊',
+                sad: '😢',
+                energetic: '⚡',
+                calm: '😌'
+            };
+
+            const playlist = playlists[mood];
+            document.getElementById('playlist-result').innerHTML = `
+                <div class="mb-4">
+                    <div class="text-2xl mb-2">${moodEmojis[mood]} Playlist personalizada criada!</div>
+                    <div class="text-sm text-gray-400">Baseada no seu humor atual</div>
+                </div>
+                ${playlist.map(song => `<div class="py-1">${song}</div>`).join('')}
+                <div class="mt-4 text-sm text-purple-400">
+                    🎧 No app completo: +1000 músicas por categoria
+                </div>
+            `;
+        }
+
+        // Love calculator
+        function calculateLove() {
+            const name1 = document.getElementById('name1').value;
+            const name2 = document.getElementById('name2').value;
+
+            if (!name1 || !name2) {
+                document.getElementById('love-result').innerHTML = '❌ Preencha os dois nomes!';
+                return;
+            }
+
+            // Simulate AI calculation
+            const compatibility = Math.floor(Math.random() * 30) + 70; // 70-99%
+            const reasons = [
+                'Personalidades complementares',
+                'Valores similares detectados',
+                'Energia compatível',
+                'Conexão emocional forte',
+                'Objetivos de vida alinhados'
+            ];
+
+            document.getElementById('love-result').innerHTML = `
+                <div class="mb-4">
+                    <div class="text-4xl mb-2">💖 ${compatibility}%</div>
+                    <div class="font-bold text-lg">${name1} + ${name2}</div>
+                </div>
+                <div class="text-sm mb-4">
+                    <div class="font-bold mb-2">Por que vocês combinam:</div>
+                    ${reasons.slice(0, 3).map(reason => `<div>✨ ${reason}</div>`).join('')}
+                </div>
+                <div class="text-xs text-pink-400">
+                    💝 Análise completa no app: Dicas de relacionamento, compatibilidade sexual, planos de futuro
+                </div>
+            `;
+        }
+
+        // Fortune teller
+        function getFortune(category) {
+            const fortunes = {
+                love: [
+                    '💕 Uma pessoa especial vai entrar na sua vida esta semana',
+                    '💖 Reconciliação importante está chegando',
+                    '💝 Declare seus sentimentos hoje, será correspondido',
+                    '💘 Encontro inesperado vai mudar tudo'
+                ],
+                work: [
+                    '💼 Proposta de trabalho interessante chegando',
+                    '📈 Reconhecimento profissional em breve',
+                    '🎯 Projeto importante será aprovado',
+                    '💪 Suas habilidades serão reconhecidas'
+                ],
+                money: [
+                    '💰 Dinheiro inesperado chegando',
+                    '🏆 Investimento vai dar certo',
+                    '💎 Oportunidade financeira única',
+                    '📊 Suas contas vão melhorar'
+                ],
+                health: [
+                    '🏥 Energia renovada chegando',
+                    '💪 Fase de vitalidade se aproxima',
+                    '🌟 Equilíbrio mental e físico',
+                    '🧘 Paz interior está próxima'
+                ]
+            };
+
+            const categoryEmojis = {
+                love: '💕',
+                work: '💼',
+                money: '💰',
+                health: '🏥'
+            };
+
+            const fortune = fortunes[category][Math.floor(Math.random() * fortunes[category].length)];
+
+            document.getElementById('fortune-result').innerHTML = `
+                <div class="mb-4">
+                    <div class="text-3xl mb-2">${categoryEmojis[category]}</div>
+                    <div class="text-lg font-bold mb-2">Sua previsão:</div>
+                    <div class="text-xl">${fortune}</div>
+                </div>
+                <div class="text-sm text-purple-400">
+                    🔮 No app: Previsões diárias personalizadas, tarot, numerologia, astrologia
+                </div>
+            `;
+        }
+
+        // Start viral experience
+        function startViralExperience() {
+            // Simulate app opening
+            alert('🚀 Redirecionando para o app... (Em desenvolvimento - por enquanto teste as demos abaixo!)');
+
+            // Scroll to demos
+            document.querySelector('#demo-challenge').scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+
+        // Download app
+        function downloadApp() {
+            // Simulate download
+            alert('📱 Download iniciado! (Em desenvolvimento - cadastre-se para ser notificado quando estiver pronto)');
+
+            // Could redirect to app store or registration page
+            window.location.href = '/emergency'; // For now, redirect to emergency system
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add some animations
+            setTimeout(() => {
+                document.querySelectorAll('.card-hover').forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(20px)';
+                        card.style.transition = 'all 0.5s ease';
+
+                        setTimeout(() => {
+                            card.style.opacity = '1';
+                            card.style.transform = 'translateY(0)';
+                        }, 100);
+                    }, index * 200);
+                });
+            }, 500);
+        });
+    </script>
+</body>
+
+</html>

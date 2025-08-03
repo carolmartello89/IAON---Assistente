@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAON - Offline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .iaon-logo {
+            font-family: 'Arial Black', sans-serif;
+            font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center">
+    <div class="text-center text-white p-8">
+        <!-- IAON Logo -->
+        <div class="mb-8">
+            <h1 class="text-6xl font-black iaon-logo text-white mb-2">IAON</h1>
+            <p class="text-xl opacity-90">Assistente IA Avançado</p>
+        </div>
+        
+        <!-- Offline Icon -->
+        <div class="mb-8">
+            <div class="w-24 h-24 mx-auto mb-4 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                <i data-lucide="wifi-off" class="w-12 h-12 text-white pulse-animation"></i>
+            </div>
+        </div>
+        
+        <!-- Offline Message -->
+        <div class="max-w-md mx-auto">
+            <h2 class="text-3xl font-bold mb-4">Você está offline</h2>
+            <p class="text-lg opacity-90 mb-6">
+                Não foi possível conectar à internet. O IAON funciona offline com funcionalidades limitadas.
+            </p>
+            
+            <!-- Available Features -->
+            <div class="bg-white bg-opacity-10 rounded-lg p-6 mb-6 text-left">
+                <h3 class="text-xl font-semibold mb-4 text-center">Funcionalidades Offline Disponíveis:</h3>
+                <ul class="space-y-2">
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="w-5 h-5 mr-3 text-green-300"></i>
+                        <span>Interface do usuário</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="w-5 h-5 mr-3 text-green-300"></i>
+                        <span>Dados em cache</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="w-5 h-5 mr-3 text-green-300"></i>
+                        <span>Configurações locais</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="x" class="w-5 h-5 mr-3 text-red-300"></i>
+                        <span>Chat com IA</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="x" class="w-5 h-5 mr-3 text-red-300"></i>
+                        <span>Sincronização de dados</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="space-y-4">
+                <button 
+                    onclick="checkConnection()" 
+                    class="w-full bg-white text-purple-600 font-semibold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
+                >
+                    <i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i>
+                    Tentar Reconectar
+                </button>
+                
+                <button 
+                    onclick="goToApp()" 
+                    class="w-full bg-transparent border-2 border-white text-white font-semibold py-3 px-6 rounded-lg hover:bg-white hover:text-purple-600 transition-colors flex items-center justify-center"
+                >
+                    <i data-lucide="home" class="w-5 h-5 mr-2"></i>
+                    Ir para o App
+                </button>
+            </div>
+        </div>
+        
+        <!-- Connection Status -->
+        <div id="connection-status" class="mt-8 p-4 bg-white bg-opacity-10 rounded-lg">
+            <p class="text-sm opacity-75">
+                <i data-lucide="info" class="w-4 h-4 inline mr-2"></i>
+                Status: <span id="status-text">Verificando conexão...</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Check connection status
+        function checkConnection() {
+            const statusText = document.getElementById('status-text');
+            statusText.textContent = 'Verificando...';
+            
+            // Try to fetch a simple endpoint
+            fetch('/api/health', { 
+                method: 'GET',
+                cache: 'no-cache'
+            })
+            .then(response => {
+                if (response.ok) {
+                    statusText.textContent = 'Conectado! Redirecionando...';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    statusText.textContent = 'Ainda offline';
+                }
+            })
+            .catch(() => {
+                statusText.textContent = 'Sem conexão com a internet';
+            });
+        }
+        
+        function goToApp() {
+            window.location.href = '/';
+        }
+        
+        // Auto-check connection every 30 seconds
+        setInterval(checkConnection, 30000);
+        
+        // Initial connection check
+        setTimeout(checkConnection, 1000);
+        
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            document.getElementById('status-text').textContent = 'Conectado! Redirecionando...';
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        });
+        
+        window.addEventListener('offline', () => {
+            document.getElementById('status-text').textContent = 'Conexão perdida';
+        });
+        
+        // Check initial online status
+        if (navigator.onLine) {
+            checkConnection();
+        } else {
+            document.getElementById('status-text').textContent = 'Sem conexão com a internet';
+        }
+    </script>
+</body>
+</html>
+

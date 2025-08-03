@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IAON - Sistema de Prevenção ao Suicídio 100% GRATUITO">
+    <meta name="theme-color" content="#dc2626">
+    <title>🚨 IAON - Sistema de Prevenção ao Suicídio - GRATUITO</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+        .emergency-gradient {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
+        }
+
+        .lifeline-gradient {
+            background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .pulse-emergency {
+            animation: pulseEmergency 1s infinite;
+        }
+
+        @keyframes pulseEmergency {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+                transform: scale(1);
+            }
+
+            50% {
+                box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+                transform: scale(1.05);
+            }
+        }
+
+        .heartbeat {
+            animation: heartbeat 1.5s ease-in-out infinite both;
+        }
+
+        @keyframes heartbeat {
+            from {
+                transform: scale(1);
+            }
+
+            10% {
+                transform: scale(1.1);
+            }
+
+            17% {
+                transform: scale(1);
+            }
+
+            33% {
+                transform: scale(1.1);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .typing-animation::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            50% {
+                opacity: 1;
+            }
+
+            51%,
+            100% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen emergency-gradient text-white">
+
+    <!-- Header de Emergência -->
+    <div class="glass-effect p-4 text-center">
+        <h1 class="text-2xl font-bold heartbeat">🚨 SISTEMA DE PREVENÇÃO AO SUICÍDIO</h1>
+        <p class="text-sm mt-2">100% GRATUITO • Confidencial • 24/7</p>
+    </div>
+
+    <!-- Botão de Emergência Principal -->
+    <div class="p-6 text-center">
+        <button id="emergencyButton"
+            class="bg-red-600 hover:bg-red-700 text-white text-xl font-bold py-6 px-12 rounded-full pulse-emergency transition-all duration-300 mb-6">
+            🆘 PRECISO DE AJUDA AGORA
+        </button>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+            <!-- CVV - Centro de Valorização da Vida -->
+            <div class="glass-effect p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-3">📞 CVV - Centro de Valorização da Vida</h3>
+                <p class="mb-4">Conversa sigilosa, gratuita e 24 horas</p>
+                <a href="tel:188"
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg inline-block">
+                    Ligar 188 AGORA
+                </a>
+            </div>
+
+            <!-- CAPS - Centro de Atenção Psicossocial -->
+            <div class="glass-effect p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-3">🏥 CAPS - Atenção Psicossocial</h3>
+                <p class="mb-4">Atendimento especializado gratuito</p>
+                <button id="findCapsButton"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">
+                    Encontrar CAPS Próximo
+                </button>
+            </div>
+
+            <!-- SAMU -->
+            <div class="glass-effect p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-3">🚑 SAMU - Emergência Médica</h3>
+                <p class="mb-4">Atendimento médico de urgência</p>
+                <a href="tel:192"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg inline-block">
+                    Ligar 192
+                </a>
+            </div>
+
+            <!-- Bombeiros -->
+            <div class="glass-effect p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-3">🚒 Bombeiros</h3>
+                <p class="mb-4">Resgate e emergência</p>
+                <a href="tel:193"
+                    class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg inline-block">
+                    Ligar 193
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat de Apoio Emocional -->
+    <div class="p-6">
+        <div class="max-w-2xl mx-auto">
+            <div class="glass-effect rounded-lg p-6">
+                <h3 class="text-xl font-bold mb-4">💬 Chat de Apoio Emocional GRATUITO</h3>
+
+                <!-- Login Rápido -->
+                <div id="loginSection" class="mb-6">
+                    <p class="mb-3">Para começar, me diga como posso te chamar:</p>
+                    <div class="flex gap-3">
+                        <input type="text" id="usernameInput" placeholder="Seu nome ou apelido"
+                            class="flex-1 px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/70 border border-white/30 focus:outline-none focus:border-white">
+                        <button id="startChatButton"
+                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold">
+                            Começar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat Interface -->
+                <div id="chatSection" class="hidden">
+                    <div id="chatMessages" class="h-64 overflow-y-auto mb-4 p-4 bg-white/10 rounded-lg">
+                        <!-- Mensagens aparecerão aqui -->
+                    </div>
+
+                    <div class="flex gap-3">
+                        <input type="text" id="messageInput" placeholder="Digite sua mensagem..."
+                            class="flex-1 px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/70 border border-white/30 focus:outline-none focus:border-white">
+                        <button id="sendMessageButton"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold">
+                            Enviar
+                        </button>
+                    </div>
+
+                    <!-- Botões de Ação Rápida -->
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <button class="quick-action bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg text-sm"
+                            data-message="Estou tendo pensamentos suicidas">
+                            🚨 Pensamentos Suicidas
+                        </button>
+                        <button
+                            class="quick-action bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg text-sm"
+                            data-message="Me sinto muito ansioso">
+                            😰 Ansiedade
+                        </button>
+                        <button
+                            class="quick-action bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm"
+                            data-message="Estou me sentindo muito triste">
+                            😢 Tristeza
+                        </button>
+                        <button
+                            class="quick-action bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg text-sm"
+                            data-message="Preciso compartilhar minha localização">
+                            📍 Compartilhar Local
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações Importantes -->
+    <div class="p-6 glass-effect m-6 rounded-lg">
+        <h3 class="text-xl font-bold mb-4">💙 VOCÊ NÃO ESTÁ SOZINHO(A)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+                <h4 class="font-bold mb-2">🔒 Confidencial</h4>
+                <p>Suas conversas são privadas e protegidas</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-2">🆓 Gratuito</h4>
+                <p>Todos os serviços são 100% gratuitos</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-2">🕐 24/7</h4>
+                <p>Disponível 24 horas, 7 dias por semana</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let authToken = null;
+        let userId = null;
+        let chatActive = false;
+
+        // Elementos DOM
+        const loginSection = document.getElementById('loginSection');
+        const chatSection = document.getElementById('chatSection');
+        const usernameInput = document.getElementById('usernameInput');
+        const startChatButton = document.getElementById('startChatButton');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+        const chatMessages = document.getElementById('chatMessages');
+        const emergencyButton = document.getElementById('emergencyButton');
+        const findCapsButton = document.getElementById('findCapsButton');
+
+        // Função para fazer login de emergência
+        async function emergencyLogin(username) {
+            try {
+                const response = await fetch('/api/auth/emergency-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.access_token;
+                    userId = data.user_id;
+                    addMessage('system', data.message);
+                    addMessage('system', '💙 Olá! Estou aqui para ajudar você. Como está se sentindo agora?');
+                    return true;
+                } else {
+                    addMessage('error', 'Erro ao conectar: ' + data.error);
+                    return false;
+                }
+            } catch (error) {
+                addMessage('error', 'Erro de conexão: ' + error.message);
+                return false;
+            }
+        }
+
+        // Função para avaliar risco de suicídio
+        async function assessSuicideRisk(message) {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch('/api/emergency/assess-risk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        voice_analysis: {},
+                        location: await getCurrentLocation()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage('system', data.message);
+
+                    if (data.resources && data.resources.length > 0) {
+                        addMessage('resources', 'Recursos de apoio disponíveis:', data.resources);
+                    }
+
+                    if (data.emergency_activated) {
+                        showEmergencyAlert();
+                    }
+
+                    if (data.monitoring_active) {
+                        addMessage('system', '🔄 Monitoramento contínuo ativado para sua segurança.');
+                    }
+                } else {
+                    addMessage('error', 'Erro na avaliação: ' + data.error);
+                }
+            } catch (error) {
+                addMessage('error', 'Erro ao processar mensagem: ' + error.message);
+            }
+        }
+
+        // Função para compartilhar localização
+        async function shareLocation() {
+            if (!authToken) return;
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    try {
+                        const response = await fetch('/api/emergency/share-location', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`
+                            },
+                            body: JSON.stringify({
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude,
+                                accuracy: position.coords.accuracy,
+                                address: 'Localização atual do usuário'
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            addMessage('system', data.message);
+                            addMessage('system', `📍 Localização compartilhada com ${data.shared_with_contacts} contatos de emergência.`);
+                        } else {
+                            addMessage('error', 'Erro ao compartilhar localização: ' + data.error);
+                        }
+                    } catch (error) {
+                        addMessage('error', 'Erro ao enviar localização: ' + error.message);
+                    }
+                }, (error) => {
+                    addMessage('error', 'Erro ao obter localização: ' + error.message);
+                });
+            } else {
+                addMessage('error', 'Geolocalização não suportada pelo navegador.');
+            }
+        }
+
+        // Função para obter localização atual
+        function getCurrentLocation() {
+            return new Promise((resolve) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            resolve({
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude,
+                                accuracy: position.coords.accuracy
+                            });
+                        },
+                        () => resolve({})
+                    );
+                } else {
+                    resolve({});
+                }
+            });
+        }
+
+        // Função para adicionar mensagem no chat
+        function addMessage(type, message, resources = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'mb-3';
+
+            let bgColor = 'bg-blue-600';
+            let icon = '🤖';
+
+            switch (type) {
+                case 'user':
+                    bgColor = 'bg-green-600';
+                    icon = '👤';
+                    break;
+                case 'system':
+                    bgColor = 'bg-blue-600';
+                    icon = '🤖';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-600';
+                    icon = '⚠️';
+                    break;
+                case 'resources':
+                    bgColor = 'bg-purple-600';
+                    icon = '📋';
+                    break;
+            }
+
+            let content = `
+                <div class="${bgColor} text-white p-3 rounded-lg">
+                    <span class="font-bold">${icon}</span> ${message}
+                </div>
+            `;
+
+            if (resources) {
+                content += '<ul class="mt-2 bg-white/20 p-2 rounded">';
+                resources.forEach(resource => {
+                    content += `<li class="mb-1">• ${resource}</li>`;
+                });
+                content += '</ul>';
+            }
+
+            messageDiv.innerHTML = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Função para mostrar alerta de emergência
+        function showEmergencyAlert() {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'fixed top-0 left-0 w-full h-full bg-red-600/90 flex items-center justify-center z-50';
+            alertDiv.innerHTML = `
+                <div class="bg-white text-red-600 p-8 rounded-lg text-center max-w-md">
+                    <h2 class="text-2xl font-bold mb-4">🚨 EMERGÊNCIA DETECTADA</h2>
+                    <p class="mb-6">Seus contatos de emergência foram notificados!</p>
+                    <div class="space-y-3">
+                        <a href="tel:188" class="block bg-green-600 text-white font-bold py-3 px-6 rounded-lg">
+                            📞 Ligar CVV 188 AGORA
+                        </a>
+                        <a href="tel:192" class="block bg-red-600 text-white font-bold py-3 px-6 rounded-lg">
+                            🚑 Ligar SAMU 192
+                        </a>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                class="block w-full bg-gray-400 text-white font-bold py-2 px-6 rounded-lg">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(alertDiv);
+        }
+
+        // Event Listeners
+        startChatButton.addEventListener('click', async () => {
+            const username = usernameInput.value.trim();
+            if (!username) {
+                alert('Por favor, digite seu nome ou apelido');
+                return;
+            }
+
+            const success = await emergencyLogin(username);
+            if (success) {
+                loginSection.classList.add('hidden');
+                chatSection.classList.remove('hidden');
+                chatActive = true;
+            }
+        });
+
+        // Enviar mensagem
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !chatActive) return;
+
+            addMessage('user', message);
+            messageInput.value = '';
+
+            // Simular "digitando..."
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'mb-3 typing-animation';
+            typingDiv.innerHTML = '<div class="bg-gray-600 text-white p-3 rounded-lg">🤖 Digitando...</div>';
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Aguardar resposta
+            setTimeout(async () => {
+                typingDiv.remove();
+                await assessSuicideRisk(message);
+            }, 1500);
+        }
+
+        sendMessageButton.addEventListener('click', sendMessage);
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Botões de ação rápida
+        document.querySelectorAll('.quick-action').forEach(button => {
+            button.addEventListener('click', () => {
+                const message = button.getAttribute('data-message');
+                messageInput.value = message;
+                sendMessage();
+            });
+        });
+
+        // Botão de emergência principal
+        emergencyButton.addEventListener('click', () => {
+            if (confirm('🚨 Você está em uma situação de emergência?\n\nVou conectar você com recursos de ajuda imediatamente!')) {
+                showEmergencyAlert();
+                if (chatActive) {
+                    assessSuicideRisk('EMERGÊNCIA: Preciso de ajuda imediata');
+                }
+            }
+        });
+
+        // Encontrar CAPS
+        findCapsButton.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    window.open(`https://www.google.com/maps/search/CAPS+Centro+de+Atenção+Psicossocial/@${lat},${lon},15z`, '_blank');
+                }, () => {
+                    window.open('https://www.google.com/maps/search/CAPS+Centro+de+Atenção+Psicossocial', '_blank');
+                });
+            } else {
+                window.open('https://www.google.com/maps/search/CAPS+Centro+de+Atenção+Psicossocial', '_blank');
+            }
+        });
+
+        // Detectar saída da página (possível tentativa de autolesão)
+        window.addEventListener('beforeunload', (e) => {
+            if (chatActive) {
+                e.preventDefault();
+                e.returnValue = '🚨 Tem certeza que quer sair? Estou aqui para ajudar você!';
+            }
+        });
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            // Focar no input de username
+            usernameInput.focus();
+
+            // Adicionar mensagem de boas-vindas
+            addMessage('system', '🚨 BEM-VINDO(A) AO SISTEMA DE PREVENÇÃO AO SUICÍDIO - 100% GRATUITO');
+            addMessage('system', '💙 Estou aqui para ajudar você 24 horas por dia. Sua vida tem valor!');
+        });
+    </script>
+</body>
+
+</html>

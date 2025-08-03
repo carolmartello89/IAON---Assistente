@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAON Security Demo - Sistema Anti-Sequestro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+
+<body class="bg-gray-900 text-white font-sans">
+    <div class="min-h-screen p-6">
+        <!-- Header -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <h1 class="text-4xl font-bold text-center mb-4">
+                🛡️ IAON Security System
+            </h1>
+            <p class="text-xl text-center text-gray-300">
+                Sistema Avançado de Proteção Anti-Sequestro e Monitoramento 24/7
+            </p>
+        </div>
+
+        <!-- Sistema de Status -->
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Status Principal -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i data-lucide="shield-check" class="w-5 h-5 mr-2 text-green-500"></i>
+                    Sistema Principal
+                </h3>
+                <div id="main-status" class="space-y-2">
+                    <div class="flex justify-between">
+                        <span>Status:</span>
+                        <span class="text-green-500 font-semibold">🟢 ATIVO</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Nível de Risco:</span>
+                        <span id="risk-level" class="text-yellow-500">⚠️ BAIXO</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Monitoramento:</span>
+                        <span class="text-blue-500">📊 24/7</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detectores Ativos -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i data-lucide="radar" class="w-5 h-5 mr-2 text-blue-500"></i>
+                    Detectores
+                </h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>🎯 Movimento Suspeito:</span>
+                        <span class="text-green-500">✅ ATIVO</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📍 Rastreamento GPS:</span>
+                        <span class="text-green-500">✅ ATIVO</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📱 Triggers de Pânico:</span>
+                        <span class="text-green-500">✅ ATIVO</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>🎤 Análise de Voz:</span>
+                        <span class="text-green-500">✅ ATIVO</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📸 Câmeras Silenciosas:</span>
+                        <span class="text-green-500">✅ PRONTO</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contatos de Emergência -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i data-lucide="phone" class="w-5 h-5 mr-2 text-red-500"></i>
+                    Emergência
+                </h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>👨‍👩‍👧‍👦 Contatos:</span>
+                        <span class="text-green-500">3 ATIVOS</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>🚔 Autoridades:</span>
+                        <span class="text-yellow-500">CONFIGURADO</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📧 Notificação:</span>
+                        <span class="text-green-500">INSTANTÂNEA</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demonstração de Triggers -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-center">🔥 Demonstração de Triggers de Pânico</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Trigger de Botão -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i data-lucide="volume-2" class="w-5 h-5 mr-2 text-purple-500"></i>
+                        Trigger de Volume
+                    </h3>
+                    <p class="text-gray-300 text-sm mb-4">
+                        Pressione F1 cinco vezes rapidamente para simular sequência de volume
+                    </p>
+                    <div class="bg-gray-700 rounded p-3">
+                        <div class="flex justify-between items-center">
+                            <span>Cliques F1:</span>
+                            <span id="volume-count" class="font-bold text-yellow-500">0/5</span>
+                        </div>
+                        <div class="w-full bg-gray-600 rounded-full h-2 mt-2">
+                            <div id="volume-progress" class="bg-purple-600 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">
+                        💡 Em dispositivos reais: Volume Up + Power simultaneamente
+                    </p>
+                </div>
+
+                <!-- Trigger de Texto -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i data-lucide="type" class="w-5 h-5 mr-2 text-green-500"></i>
+                        Código de Pânico
+                    </h3>
+                    <p class="text-gray-300 text-sm mb-4">
+                        Digite um código de pânico em qualquer campo de texto
+                    </p>
+                    <input type="text" id="panic-input" placeholder="Digite aqui... (tente: 911help)"
+                        class="w-full p-3 bg-gray-700 rounded text-white placeholder-gray-400">
+                    <p class="text-xs text-gray-400 mt-2">
+                        🔑 Códigos: 911help, sos123, emergencia456, help999
+                    </p>
+                </div>
+
+                <!-- Trigger de Shake -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i data-lucide="smartphone" class="w-5 h-5 mr-2 text-blue-500"></i>
+                        Shake Pattern
+                    </h3>
+                    <p class="text-gray-300 text-sm mb-4">
+                        Simule balançar o dispositivo com força (3x seguidas)
+                    </p>
+                    <button id="shake-trigger" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded font-semibold">
+                        🤳 Simular Shake
+                    </button>
+                    <div class="bg-gray-700 rounded p-3 mt-3">
+                        <div class="flex justify-between items-center">
+                            <span>Shakes:</span>
+                            <span id="shake-count" class="font-bold text-blue-500">0/3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trigger de Voz -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i data-lucide="mic" class="w-5 h-5 mr-2 text-red-500"></i>
+                        Comando de Voz
+                    </h3>
+                    <p class="text-gray-300 text-sm mb-4">
+                        Fale uma frase de pânico específica
+                    </p>
+                    <button id="voice-trigger" class="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-semibold">
+                        🎤 Ativar Reconhecimento
+                    </button>
+                    <p class="text-xs text-gray-400 mt-2">
+                        🗣️ Frase: "código vermelho ativado"
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulação de Resposta -->
+        <div class="max-w-4xl mx-auto">
+            <div id="emergency-response" class="hidden bg-red-900 border border-red-600 rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-center">
+                    🚨 MODO EMERGÊNCIA ATIVADO
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">📞 Notificações Enviadas:</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex items-center">
+                                <span class="text-green-500 mr-2">✅</span>
+                                Contato 1: João Silva (+55 11 99999-9999)
+                            </li>
+                            <li class="flex items-center">
+                                <span class="text-green-500 mr-2">✅</span>
+                                Contato 2: Maria Santos (+55 11 88888-8888)
+                            </li>
+                            <li class="flex items-center">
+                                <span class="text-yellow-500 mr-2">⏳</span>
+                                Autoridades: 190 (em processamento)
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">📸 Evidências Coletadas:</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex items-center">
+                                <span class="text-green-500 mr-2">✅</span>
+                                📷 Foto câmera traseira capturada
+                            </li>
+                            <li class="flex items-center">
+                                <span class="text-green-500 mr-2">✅</span>
+                                📷 Foto câmera frontal capturada
+                            </li>
+                            <li class="flex items-center">
+                                <span class="text-green-500 mr-2">✅</span>
+                                🎵 Áudio ambiente gravado (30s)
+                            </li>
+                            <li class="flex items-center">
+                                <span class="text-green-500 mr-2">✅</span>
+                                📍 Localização GPS compartilhada
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-yellow-900 border border-yellow-600 rounded">
+                    <h4 class="font-bold mb-2">⚠️ MODO SILENCIOSO ATIVO</h4>
+                    <p class="text-sm">
+                        • Nenhuma notificação visível no dispositivo<br>
+                        • Rastreamento contínuo em segundo plano<br>
+                        • Contatos instruídos a NÃO entrar em contato<br>
+                        • Evidências salvas de forma segura
+                    </p>
+                </div>
+
+                <button onclick="resetDemo()"
+                    class="w-full mt-4 bg-gray-600 hover:bg-gray-700 p-3 rounded font-semibold">
+                    🔄 Reset Demonstração
+                </button>
+            </div>
+        </div>
+
+        <!-- Informações Técnicas -->
+        <div class="max-w-4xl mx-auto mt-12 bg-gray-800 rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">🔧 Recursos Técnicos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div>
+                    <h3 class="font-semibold mb-2 text-blue-400">Monitoramento Contínuo:</h3>
+                    <ul class="space-y-1 text-gray-300">
+                        <li>• Service Worker rodando 24/7</li>
+                        <li>• Análise de movimento por acelerômetro</li>
+                        <li>• Detecção de mudança de localização</li>
+                        <li>• Monitoramento de padrões comportamentais</li>
+                        <li>• Análise de velocidade e rota</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-green-400">Operação Silenciosa:</h3>
+                    <ul class="space-y-1 text-gray-300">
+                        <li>• Zero notificações visíveis</li>
+                        <li>• Captura silenciosa de câmeras</li>
+                        <li>• Gravação de áudio ambiente</li>
+                        <li>• Compartilhamento automático de localização</li>
+                        <li>• Instruções específicas para contatos</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-yellow-400">Triggers de Ativação:</h3>
+                    <ul class="space-y-1 text-gray-300">
+                        <li>• Sequência de botões físicos</li>
+                        <li>• Códigos de pânico em texto</li>
+                        <li>• Comandos de voz específicos</li>
+                        <li>• Padrões de movimento</li>
+                        <li>• Detecção automática de risco</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-red-400">Resposta de Emergência:</h3>
+                    <ul class="space-y-1 text-gray-300">
+                        <li>• Notificação instantânea de contatos</li>
+                        <li>• Coleta automática de evidências</li>
+                        <li>• Rastreamento em tempo real</li>
+                        <li>• Integração com autoridades</li>
+                        <li>• Backup seguro de dados</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sistema de Invasão Domiciliar -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-center">🏠 Sistema Anti-Invasão Domiciliar</h2>
+
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Reconhecimento de Voz -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i data-lucide="mic" class="w-5 h-5 mr-2 text-red-500"></i>
+                            Detecção por Voz
+                        </h3>
+                        <p class="text-gray-300 text-sm mb-4">
+                            Sistema detecta frases de pânico automaticamente
+                        </p>
+                        <div class="bg-gray-700 rounded p-3 mb-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span>Status do Microfone:</span>
+                                <span id="mic-status" class="text-green-500">🟢 ATIVO</span>
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                Frases monitoradas: "socorro tem gente aqui", "tem ladrão na minha casa", etc.
+                            </div>
+                        </div>
+                        <button id="test-voice-panic"
+                            class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            🗣️ Simular Frase de Pânico
+                        </button>
+                    </div>
+
+                    <!-- Sistema de Chamadas -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i data-lucide="phone" class="w-5 h-5 mr-2 text-blue-500"></i>
+                            Sistema de Chamadas Automáticas
+                        </h3>
+                        <p class="text-gray-300 text-sm mb-4">
+                            Após 1 minuto, liga automaticamente para contatos
+                        </p>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>📱 Mensagem enviada:</span>
+                                <span class="text-yellow-500">Aguardando</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>⏱️ Timer chamada:</span>
+                                <span id="call-timer" class="text-blue-500">60s</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>📞 Status chamada:</span>
+                                <span id="call-status" class="text-gray-500">Não iniciado</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensagem de Invasão -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i data-lucide="message-circle" class="w-5 h-5 mr-2 text-orange-500"></i>
+                    Mensagem de Emergência
+                </h3>
+                <div class="bg-red-900 border border-red-600 rounded-lg p-4">
+                    <div class="text-center">
+                        <div class="text-xl font-bold text-red-300 mb-2">
+                            🚨 ALERTA DE EMERGÊNCIA 🚨
+                        </div>
+                        <div class="text-lg text-white mb-2">
+                            "ENTRARAM NA MINHA CASA E ESTOU DE REFÉM, ME AJUDE!"
+                        </div>
+                        <div class="text-sm text-red-200">
+                            📍 Localização: Enviada automaticamente<br>
+                            📸 Fotos: Capturadas discretamente<br>
+                            🎙️ Áudio: Transmissão em tempo real
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-xs text-gray-400 text-center">
+                    ⚠️ Contatos NÃO devem ligar de volta imediatamente - podem colocar a vítima em risco
+                </div>
+            </div>
+        </div>
+
+        <!-- Log de Atividades -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-center">📋 Log de Atividades</h2>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div id="activity-log" class="space-y-2 max-h-64 overflow-y-auto">
+                    <div class="text-sm text-gray-400 italic">Sistema inicializado - aguardando atividades...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables for demo
+        let volumeClickCount = 0;
+        let shakeCount = 0;
+        let emergencyActivated = false;
+        let homeInvasionActive = false;
+        let callTimer = 60;
+        let callInterval;
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Home invasion test
+        document.getElementById('test-voice-panic').addEventListener('click', function () {
+            if (homeInvasionActive || emergencyActivated) return;
+            simulateHomeInvasion();
+        });
+
+        function simulateHomeInvasion() {
+            homeInvasionActive = true;
+            logActivity('🏠 Frase de pânico detectada: "socorro tem gente aqui"', 'error');
+            logActivity('📱 Enviando mensagem silenciosa para contatos...', 'warning');
+
+            // Simular envio de mensagem
+            setTimeout(() => {
+                logActivity('✅ Mensagem enviada: "ENTRARAM NA MINHA CASA E ESTOU DE REFÉM, ME AJUDE!"', 'success');
+                startCallTimer();
+            }, 2000);
+
+            // Atualizar UI
+            document.getElementById('call-status').textContent = 'Mensagem enviada';
+            document.getElementById('call-status').className = 'text-green-500';
+
+            // Simular captura de evidências
+            setTimeout(() => {
+                logActivity('📸 Capturando fotos discretas das câmeras...', 'info');
+            }, 3000);
+
+            setTimeout(() => {
+                logActivity('🎙️ Iniciando gravação de áudio ambiente...', 'info');
+            }, 4000);
+        }
+
+        function startCallTimer() {
+            callTimer = 60;
+            document.getElementById('call-timer').textContent = `${callTimer}s`;
+
+            callInterval = setInterval(() => {
+                callTimer--;
+                document.getElementById('call-timer').textContent = `${callTimer}s`;
+
+                if (callTimer <= 0) {
+                    clearInterval(callInterval);
+                    startAutomaticCalls();
+                }
+            }, 1000);
+        }
+
+        function startAutomaticCalls() {
+            logActivity('📞 Iniciando chamadas automáticas...', 'warning');
+            document.getElementById('call-status').textContent = 'Ligando...';
+            document.getElementById('call-status').className = 'text-blue-500';
+
+            // Simular chamadas
+            setTimeout(() => {
+                logActivity('📞 Ligando para João Silva (+55 11 99999-9999)...', 'info');
+            }, 1000);
+
+            setTimeout(() => {
+                logActivity('✅ Chamada atendida! Transmitindo áudio ambiente...', 'success');
+                document.getElementById('call-status').textContent = 'Conectado - Áudio ativo';
+                document.getElementById('call-status').className = 'text-green-500';
+            }, 5000);
+
+            setTimeout(() => {
+                logActivity('🎙️ Contato pode ouvir tudo que está acontecendo no local', 'info');
+            }, 6000);
+
+            setTimeout(() => {
+                logActivity('🚔 Contato orientado a chamar a polícia sem retornar ligação', 'warning');
+            }, 8000);
+        }
+
+        function logActivity(message, type = 'info') {
+            const activityLog = document.getElementById('activity-log');
+            const timestamp = new Date().toLocaleTimeString();
+
+            const colors = {
+                'info': 'text-blue-400',
+                'success': 'text-green-400',
+                'warning': 'text-yellow-400',
+                'error': 'text-red-400'
+            };
+
+            const icons = {
+                'info': 'ℹ️',
+                'success': '✅',
+                'warning': '⚠️',
+                'error': '🚨'
+            };
+
+            const logDiv = document.createElement('div');
+            logDiv.className = `text-sm ${colors[type]}`;
+            logDiv.innerHTML = `
+                <span class="text-gray-500">${timestamp}</span> 
+                ${icons[type]} ${message}
+            `;
+
+            activityLog.appendChild(logDiv);
+            activityLog.scrollTop = activityLog.scrollHeight;
+
+            // Limitar a 50 logs
+            while (activityLog.children.length > 50) {
+                activityLog.removeChild(activityLog.firstChild);
+            }
+        }
+
+        // Volume trigger demo
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'F1') {
+                event.preventDefault();
+                if (emergencyActivated) return;
+
+                volumeClickCount++;
+                document.getElementById('volume-count').textContent = `${volumeClickCount}/5`;
+                document.getElementById('volume-progress').style.width = `${(volumeClickCount / 5) * 100}%`;
+
+                if (volumeClickCount >= 5) {
+                    activateEmergencyDemo('Volume Trigger');
+                }
+
+                // Reset after 10 seconds
+                setTimeout(() => {
+                    if (volumeClickCount > 0) volumeClickCount--;
+                    document.getElementById('volume-count').textContent = `${volumeClickCount}/5`;
+                    document.getElementById('volume-progress').style.width = `${(volumeClickCount / 5) * 100}%`;
+                }, 10000);
+            }
+        });
+
+        // Text panic trigger demo
+        document.getElementById('panic-input').addEventListener('input', (event) => {
+            if (emergencyActivated) return;
+
+            const value = event.target.value.toLowerCase();
+            const panicCodes = ['911help', 'sos123', 'emergencia456', 'help999'];
+
+            for (const code of panicCodes) {
+                if (value.includes(code)) {
+                    event.target.value = event.target.value.replace(new RegExp(code, 'gi'), '');
+                    activateEmergencyDemo('Text Panic Code');
+                    break;
+                }
+            }
+        });
+
+        // Shake trigger demo
+        document.getElementById('shake-trigger').addEventListener('click', () => {
+            if (emergencyActivated) return;
+
+            shakeCount++;
+            document.getElementById('shake-count').textContent = `${shakeCount}/3`;
+
+            if (shakeCount >= 3) {
+                activateEmergencyDemo('Shake Pattern');
+            } else {
+                setTimeout(() => {
+                    if (shakeCount > 0) shakeCount--;
+                    document.getElementById('shake-count').textContent = `${shakeCount}/3`;
+                }, 5000);
+            }
+        });
+
+        // Voice trigger demo
+        document.getElementById('voice-trigger').addEventListener('click', () => {
+            if (emergencyActivated) return;
+
+            // Simulate voice recognition
+            const button = document.getElementById('voice-trigger');
+            button.textContent = '🎤 Escutando...';
+            button.disabled = true;
+
+            setTimeout(() => {
+                activateEmergencyDemo('Voice Command');
+            }, 3000);
+        });
+
+        function activateEmergencyDemo(triggerType) {
+            if (emergencyActivated) return;
+
+            emergencyActivated = true;
+
+            // Update risk level
+            document.getElementById('risk-level').innerHTML = '🚨 CRÍTICO';
+            document.getElementById('risk-level').className = 'text-red-500 font-bold';
+
+            // Show emergency response
+            document.getElementById('emergency-response').classList.remove('hidden');
+
+            // Scroll to response
+            document.getElementById('emergency-response').scrollIntoView({
+                behavior: 'smooth'
+            });
+
+            // Simulate notification sounds (in real app would be silent)
+            console.log(`🚨 EMERGENCY ACTIVATED - Trigger: ${triggerType}`);
+
+            // Show discrete indicator (simulation)
+            showDiscreteIndicator();
+        }
+
+        function showDiscreteIndicator() {
+            const indicator = document.createElement('div');
+            indicator.style.cssText = `
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: 2px;
+                height: 2px;
+                background: red;
+                z-index: 9999;
+                opacity: 0.3;
+            `;
+            document.body.appendChild(indicator);
+
+            setTimeout(() => {
+                if (document.body.contains(indicator)) {
+                    indicator.remove();
+                }
+            }, 30000);
+        }
+
+        function resetDemo() {
+            emergencyActivated = false;
+            volumeClickCount = 0;
+            shakeCount = 0;
+
+            // Reset UI
+            document.getElementById('volume-count').textContent = '0/5';
+            document.getElementById('volume-progress').style.width = '0%';
+            document.getElementById('shake-count').textContent = '0/3';
+            document.getElementById('panic-input').value = '';
+            document.getElementById('voice-trigger').textContent = '🎤 Ativar Reconhecimento';
+            document.getElementById('voice-trigger').disabled = false;
+
+            // Reset risk level
+            document.getElementById('risk-level').innerHTML = '⚠️ BAIXO';
+            document.getElementById('risk-level').className = 'text-yellow-500';
+
+            // Hide emergency response
+            document.getElementById('emergency-response').classList.add('hidden');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Update status indicators
+        setInterval(() => {
+            if (!emergencyActivated) {
+                const now = new Date();
+                const status = document.getElementById('main-status');
+                // Add some dynamic behavior
+            }
+        }, 1000);
+
+        console.log('🛡️ IAON Security Demo carregado');
+        console.log('💡 Experimente os triggers para ver o sistema em ação!');
+    </script>
+</body>
+
+</html>

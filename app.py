@@ -624,7 +624,6 @@ def daily_fortune():
 # ===============================
 
 @app.route('/api/emergency/kidnapping', methods=['POST'])
-@require_auth
 def handle_kidnapping_alert():
     """API de produção para alertas de sequestro"""
     try:
@@ -672,7 +671,6 @@ def handle_kidnapping_alert():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/emergency/home-invasion', methods=['POST'])
-@require_auth
 def handle_home_invasion_alert():
     """API de produção para alertas de invasão domiciliar"""
     try:

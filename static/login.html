@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -223,6 +224,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="login-container">
         <div class="logo">
@@ -297,10 +299,10 @@
             // Atualizar tabs
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-            
+
             event.target.classList.add('active');
             document.getElementById(tab + '-form').classList.add('active');
-            
+
             clearMessages();
         }
 
@@ -326,10 +328,10 @@
         // Login
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
-            
+
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
@@ -338,9 +340,9 @@
                     },
                     body: JSON.stringify({ email, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     showSuccess('Login realizado com sucesso! Redirecionando...');
                     setTimeout(() => {
@@ -357,17 +359,17 @@
         // Registro
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const name = document.getElementById('register-name').value;
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
             const confirm = document.getElementById('register-confirm').value;
-            
+
             if (password !== confirm) {
                 showError('As senhas não coincidem');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/auth/register', {
                     method: 'POST',
@@ -376,9 +378,9 @@
                     },
                     body: JSON.stringify({ name, email, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     showSuccess('Conta criada com sucesso! Fazendo login...');
                     setTimeout(() => {
@@ -396,23 +398,24 @@
         function accessDemo() {
             if (confirm('Acessar em modo demo? Algumas funcionalidades estarão limitadas.')) {
                 fetch('/api/auth/demo', { method: 'POST' })
-                .then(() => {
-                    window.location.href = '/?demo=true';
-                });
+                    .then(() => {
+                        window.location.href = '/?demo=true';
+                    });
             }
         }
 
         // Verificar se já está logado
         fetch('/api/auth/check')
-        .then(response => response.json())
-        .then(data => {
-            if (data.authenticated) {
-                window.location.href = '/';
-            }
-        })
-        .catch(() => {
-            // Usuário não logado, continua na tela de login
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.authenticated) {
+                    window.location.href = '/';
+                }
+            })
+            .catch(() => {
+                // Usuário não logado, continua na tela de login
+            });
     </script>
 </body>
+
 </html>

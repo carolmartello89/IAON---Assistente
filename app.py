@@ -131,6 +131,55 @@ def init_emergency_database():
         )
     ''')
     
+    # Tabela de biometria de voz (memória persistente)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS voice_biometry (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            participant_name TEXT NOT NULL,
+            voice_signature TEXT NOT NULL,
+            enrollment_phrase TEXT,
+            audio_features TEXT,
+            quality_score REAL,
+            enrollment_date DATETIME NOT NULL,
+            last_recognition DATETIME,
+            recognition_count INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT TRUE,
+            is_owner BOOLEAN DEFAULT FALSE,
+            command_authority BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+    
+    # Tabela de reconhecimentos de voz
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS voice_recognitions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            biometry_id TEXT NOT NULL,
+            meeting_id TEXT,
+            recognition_confidence REAL,
+            audio_sample TEXT,
+            timestamp DATETIME NOT NULL,
+            device_info TEXT,
+            FOREIGN KEY (biometry_id) REFERENCES voice_biometry (id)
+        )
+    ''')
+    
+    # Tabela de reuniões
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS meetings (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            title TEXT,
+            start_time DATETIME NOT NULL,
+            end_time DATETIME,
+            participants_detected INTEGER DEFAULT 0,
+            audio_recording_path TEXT,
+            status TEXT DEFAULT 'active',
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+    
     conn.commit()
     conn.close()
     logger.info("Base de dados de emergência inicializada")
@@ -1149,33 +1198,475 @@ def complete_onboarding():
 @app.route('/api/voice-biometry/advanced-enroll', methods=['POST'])
 @require_auth
 def voice_biometry_enroll():
-    """Cadastrar biometria de voz avançada"""
+    """Cadastrar biometria de voz avançada com memória persistente"""
     try:
         data = request.get_json()
-        user_id = data.get('user_id')
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        user_id = user['id']
+        participant_name = data.get('participant_name', 'Participante')
         audio_data = data.get('audio_data')
         phrase = data.get('enrollment_phrase')
+        is_owner = data.get('is_owner', False)  # Identificar se é o dono da conta
         
-        logger.info(f"Cadastrando biometria de voz para usuário {user_id}: {phrase}")
+        logger.info(f"Cadastrando biometria de voz para usuário {user_id}: {participant_name} (Owner: {is_owner})")
+        
+        # Verificar se já existe biometria do dono
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        if is_owner:
+            cursor.execute('SELECT id FROM voice_biometry WHERE user_id = ? AND is_owner = TRUE', (user_id,))
+            existing_owner = cursor.fetchone()
+            if existing_owner:
+                conn.close()
+                return jsonify({
+                    'status': 'error',
+                    'message': '👑 Biometria do usuário principal já cadastrada. Apenas uma vez é necessária.'
+                }), 400
+        
+        # Gerar assinatura de voz única (simulada)
+        import hashlib
+        voice_signature = hashlib.sha256(f"{user_id}_{participant_name}_{phrase}_{is_owner}".encode()).hexdigest()
+        
+        # Simular extração de características de áudio
+        audio_features = {
+            'pitch_average': 150.5,
+            'pitch_variance': 25.3,
+            'formants': [800, 1200, 2400],
+            'mfcc_coefficients': [1.2, -0.8, 0.5, -0.3, 0.9],
+            'spectral_centroid': 1800.0,
+            'zero_crossing_rate': 0.12,
+            'is_owner': is_owner,  # Marcador especial para o dono
+            'command_authority': is_owner  # Apenas o dono pode dar comandos
+        }
+        
+        # Calcular score de qualidade (maior para o dono)
+        base_quality = min(0.95, max(0.6, len(phrase) * 0.1 + 0.5))
+        quality_score = base_quality + (0.05 if is_owner else 0)  # Bonus para o dono
+        
+        # Salvar no banco de dados
+        biometry_id = str(uuid.uuid4())
+        
+        cursor.execute('''
+            INSERT INTO voice_biometry 
+            (id, user_id, participant_name, voice_signature, enrollment_phrase, 
+             audio_features, quality_score, enrollment_date, is_owner, command_authority)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            biometry_id,
+            user_id,
+            participant_name,
+            voice_signature,
+            phrase,
+            json.dumps(audio_features),
+            quality_score,
+            datetime.now(),
+            is_owner,
+            is_owner  # Autoridade de comando = se é o dono
+        ))
+        
+        conn.commit()
+        conn.close()
         
         # Em produção real, processar áudio e treinar modelo
         biometry_data = {
+            'biometry_id': biometry_id,
             'user_id': user_id,
+            'participant_name': participant_name,
             'enrollment_phrase': phrase,
-            'audio_quality': data.get('audio_quality', 'good'),
-            'duration': data.get('duration', 3.5),
+            'voice_signature': voice_signature[:16] + "...",  # Mostrar apenas parte
+            'audio_quality': 'excellent' if quality_score > 0.9 else 'good' if quality_score > 0.7 else 'fair',
+            'quality_score': quality_score,
             'status': 'enrolled',
+            'is_owner': is_owner,
+            'command_authority': is_owner,  # Apenas o dono pode dar comandos
+            'features_extracted': len(audio_features),
             'timestamp': datetime.now().isoformat()
         }
         
+        owner_msg = " 👑 USUÁRIO PRINCIPAL" if is_owner else ""
+        authority_msg = " PODE CONTROLAR O IAON POR VOZ!" if is_owner else " será apenas reconhecido"
+        logger.info(f"✅ Biometria salva: {participant_name}{owner_msg} (Quality: {quality_score:.2f})")
+        
         return jsonify({
             'status': 'success',
-            'message': 'Amostra de voz processada com sucesso',
+            'message': f'🎙️ Voz de {participant_name}{owner_msg} cadastrada com sucesso! {"🔒 Você pode controlar o IAON por voz." if is_owner else "Sistema reconhecerá em futuras reuniões."}',
             'biometry_data': biometry_data
         })
         
     except Exception as e:
         logger.error(f"Erro no cadastro de biometria: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/voice-biometry/recognize', methods=['POST'])
+@require_auth
+def voice_recognition():
+    """Reconhecer voz em tempo real durante reuniões"""
+    try:
+        data = request.get_json()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        user_id = user['id']
+        audio_sample = data.get('audio_sample')
+        meeting_id = data.get('meeting_id', str(uuid.uuid4()))
+        is_command_request = data.get('is_command', False)  # Se é tentativa de comando
+        
+        # Buscar todas as biometrias do usuário
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, participant_name, voice_signature, audio_features, quality_score, 
+                   is_owner, command_authority
+            FROM voice_biometry 
+            WHERE user_id = ? AND is_active = TRUE
+            ORDER BY quality_score DESC
+        ''', (user_id,))
+        
+        biometries = cursor.fetchall()
+        
+        if not biometries:
+            conn.close()
+            return jsonify({
+                'status': 'no_profiles',
+                'message': 'Nenhum perfil de voz cadastrado',
+                'recognized': False
+            })
+        
+        # Simular reconhecimento de voz
+        best_match = None
+        best_confidence = 0.0
+        
+        for biometry in biometries:
+            biometry_id, name, signature, features_json, quality, is_owner, command_authority = biometry
+            
+            # Simular comparação de características
+            # Em produção real, seria feita comparação de MFCC, pitch, etc.
+            import random
+            confidence = min(0.95, max(0.3, quality * random.uniform(0.7, 1.0)))
+            
+            if confidence > best_confidence and confidence > 0.7:  # Threshold de confiança
+                best_confidence = confidence
+                best_match = {
+                    'biometry_id': biometry_id,
+                    'participant_name': name,
+                    'confidence': confidence,
+                    'quality_score': quality,
+                    'is_owner': bool(is_owner),
+                    'command_authority': bool(command_authority)
+                }
+        
+        if best_match:
+            # Verificar autoridade para comandos
+            if is_command_request and not best_match['command_authority']:
+                conn.close()
+                logger.warning(f"🚫 Tentativa de comando negada para: {best_match['participant_name']} (não é o usuário principal)")
+                return jsonify({
+                    'status': 'command_denied',
+                    'recognized': True,
+                    'participant': best_match['participant_name'],
+                    'confidence': best_confidence,
+                    'command_allowed': False,
+                    'message': f"🚫 {best_match['participant_name']} reconhecido, mas apenas o usuário principal pode dar comandos ao IAON.",
+                    'error': 'Comando negado - Autoridade insuficiente'
+                }), 403
+            
+            # Registrar reconhecimento
+            cursor.execute('''
+                INSERT INTO voice_recognitions 
+                (biometry_id, meeting_id, recognition_confidence, timestamp, device_info)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                best_match['biometry_id'],
+                meeting_id,
+                best_confidence,
+                datetime.now(),
+                json.dumps(data.get('device_info', {}))
+            ))
+            
+            # Atualizar contador de reconhecimentos
+            cursor.execute('''
+                UPDATE voice_biometry 
+                SET last_recognition = ?, recognition_count = recognition_count + 1
+                WHERE id = ?
+            ''', (datetime.now(), best_match['biometry_id']))
+            
+            conn.commit()
+            conn.close()
+            
+            owner_indicator = " 👑" if best_match['is_owner'] else ""
+            command_status = "🔒 COMANDO AUTORIZADO" if best_match['command_authority'] else "👥 APENAS RECONHECIMENTO"
+            
+            logger.info(f"🎯 Voz reconhecida: {best_match['participant_name']}{owner_indicator} (Confiança: {best_confidence:.2f}) - {command_status}")
+            
+            return jsonify({
+                'status': 'success',
+                'recognized': True,
+                'participant': best_match['participant_name'],
+                'confidence': best_confidence,
+                'biometry_id': best_match['biometry_id'],
+                'meeting_id': meeting_id,
+                'is_owner': best_match['is_owner'],
+                'command_authority': best_match['command_authority'],
+                'command_allowed': best_match['command_authority'],
+                'message': f"👋 {best_match['participant_name']}{owner_indicator} detectado na reunião! {command_status}",
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            conn.close()
+            return jsonify({
+                'status': 'not_recognized',
+                'recognized': False,
+                'message': 'Voz não reconhecida. Participante novo?',
+                'suggestion': 'Cadastre este participante para futuras reuniões',
+                'meeting_id': meeting_id
+            })
+        
+    except Exception as e:
+        logger.error(f"Erro no reconhecimento de voz: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/voice-biometry/participants', methods=['GET'])
+@require_auth
+def list_voice_participants():
+    """Listar todos os participantes cadastrados"""
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, participant_name, enrollment_phrase, quality_score, 
+                   enrollment_date, last_recognition, recognition_count, is_active,
+                   is_owner, command_authority
+            FROM voice_biometry 
+            WHERE user_id = ?
+            ORDER BY is_owner DESC, recognition_count DESC, enrollment_date DESC
+        ''', (user['id'],))
+        
+        participants = []
+        for row in cursor.fetchall():
+            participants.append({
+                'id': row[0],
+                'name': row[1],
+                'enrollment_phrase': row[2],
+                'quality_score': row[3],
+                'enrollment_date': row[4],
+                'last_recognition': row[5],
+                'recognition_count': row[6],
+                'is_active': bool(row[7]),
+                'is_owner': bool(row[8]),
+                'command_authority': bool(row[9]),
+                'status': 'Ativo' if row[7] else 'Inativo',
+                'role': '👑 Usuário Principal' if row[8] else '👥 Participante',
+                'permissions': '🔒 Pode controlar IAON' if row[9] else '👁️ Apenas reconhecimento'
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'participants': participants,
+            'total': len(participants),
+            'active': len([p for p in participants if p['is_active']]),
+            'owner_registered': any(p['is_owner'] for p in participants),
+            'command_authority_count': len([p for p in participants if p['command_authority']])
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao listar participantes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/voice-biometry/validate-command', methods=['POST'])
+@require_auth
+def validate_voice_command():
+    """Validar se a voz reconhecida pode executar comandos no IAON"""
+    try:
+        data = request.get_json()
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        audio_sample = data.get('audio_sample')
+        command_text = data.get('command', '')
+        
+        # Primeiro reconhecer a voz
+        recognition_result = voice_recognition_internal(user['id'], audio_sample, is_command=True)
+        
+        if not recognition_result['recognized']:
+            return jsonify({
+                'status': 'validation_failed',
+                'command_allowed': False,
+                'message': '🚫 Voz não reconhecida. Comando negado.',
+                'error': 'Usuário não identificado'
+            }), 403
+        
+        if not recognition_result['command_authority']:
+            return jsonify({
+                'status': 'validation_failed',
+                'command_allowed': False,
+                'participant': recognition_result['participant'],
+                'message': f"🚫 {recognition_result['participant']} reconhecido, mas apenas o usuário principal pode controlar o IAON.",
+                'error': 'Autoridade insuficiente'
+            }), 403
+        
+        # Comando autorizado
+        logger.info(f"✅ Comando autorizado pelo usuário principal: {recognition_result['participant']} - '{command_text}'")
+        
+        return jsonify({
+            'status': 'validation_success',
+            'command_allowed': True,
+            'participant': recognition_result['participant'],
+            'confidence': recognition_result['confidence'],
+            'command_text': command_text,
+            'message': f"🔒 Comando autorizado pelo usuário principal: {recognition_result['participant']}",
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro na validação de comando por voz: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def voice_recognition_internal(user_id, audio_sample, is_command=False):
+    """Função interna para reconhecimento de voz (sem autenticação HTTP)"""
+    try:
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, participant_name, voice_signature, audio_features, quality_score, 
+                   is_owner, command_authority
+            FROM voice_biometry 
+            WHERE user_id = ? AND is_active = TRUE
+            ORDER BY quality_score DESC
+        ''', (user_id,))
+        
+        biometries = cursor.fetchall()
+        
+        if not biometries:
+            conn.close()
+            return {'recognized': False}
+        
+        # Simular reconhecimento
+        best_match = None
+        best_confidence = 0.0
+        
+        for biometry in biometries:
+            biometry_id, name, signature, features_json, quality, is_owner, command_authority = biometry
+            
+            import random
+            confidence = min(0.95, max(0.3, quality * random.uniform(0.7, 1.0)))
+            
+            if confidence > best_confidence and confidence > 0.7:
+                best_confidence = confidence
+                best_match = {
+                    'biometry_id': biometry_id,
+                    'participant_name': name,
+                    'confidence': confidence,
+                    'is_owner': bool(is_owner),
+                    'command_authority': bool(command_authority)
+                }
+        
+        conn.close()
+        
+        if best_match:
+            return {
+                'recognized': True,
+                'participant': best_match['participant_name'],
+                'confidence': best_confidence,
+                'biometry_id': best_match['biometry_id'],
+                'is_owner': best_match['is_owner'],
+                'command_authority': best_match['command_authority']
+            }
+        else:
+            return {'recognized': False}
+            
+    except Exception as e:
+        logger.error(f"Erro no reconhecimento interno: {str(e)}")
+        return {'recognized': False}
+
+@app.route('/api/voice-biometry/participants/<participant_id>', methods=['DELETE'])
+@require_auth
+def delete_voice_participant(participant_id):
+    """Remover participante cadastrado"""
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        # Verificar se o participante pertence ao usuário
+        cursor.execute('SELECT participant_name FROM voice_biometry WHERE id = ? AND user_id = ?', 
+                      (participant_id, user['id']))
+        result = cursor.fetchone()
+        
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Participante não encontrado'}), 404
+        
+        participant_name = result[0]
+        
+        # Marcar como inativo ao invés de deletar (manter histórico)
+        cursor.execute('UPDATE voice_biometry SET is_active = FALSE WHERE id = ?', (participant_id,))
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Participante removido: {participant_name}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Participante {participant_name} removido da memória de voz'
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao remover participante: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/meetings/start', methods=['POST'])
+@require_auth
+def start_meeting():
+    """Iniciar nova reunião com reconhecimento de voz"""
+    try:
+        data = request.get_json()
+        user = get_current_user()
+        
+        meeting_id = str(uuid.uuid4())
+        title = data.get('title', f'Reunião {datetime.now().strftime("%d/%m %H:%M")}')
+        
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO meetings (id, user_id, title, start_time, status)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (meeting_id, user['id'], title, datetime.now(), 'active'))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"📅 Reunião iniciada: {title} (ID: {meeting_id})")
+        
+        return jsonify({
+            'status': 'success',
+            'meeting_id': meeting_id,
+            'title': title,
+            'message': '🎙️ Reunião iniciada! Sistema de reconhecimento de voz ativo.',
+            'voice_recognition_active': True,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao iniciar reunião: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/status')

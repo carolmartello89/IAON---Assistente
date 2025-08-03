@@ -1469,6 +1469,21 @@ def list_voice_participants():
                 'role': '👑 Usuário Principal' if row[8] else '👥 Participante',
                 'permissions': '🔒 Pode controlar IAON' if row[9] else '👁️ Apenas reconhecimento'
             })
+            participants.append({
+                'id': row[0],
+                'name': row[1],
+                'enrollment_phrase': row[2],
+                'quality_score': row[3],
+                'enrollment_date': row[4],
+                'last_recognition': row[5],
+                'recognition_count': row[6],
+                'is_active': bool(row[7]),
+                'is_owner': bool(row[8]),
+                'command_authority': bool(row[9]),
+                'status': 'Ativo' if row[7] else 'Inativo',
+                'role': '👑 Usuário Principal' if row[8] else '👥 Participante',
+                'permissions': '🔒 Pode controlar IAON' if row[9] else '👁️ Apenas reconhecimento'
+            })
         
         conn.close()
         
@@ -1667,6 +1682,83 @@ def start_meeting():
         
     except Exception as e:
         logger.error(f"Erro ao iniciar reunião: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/meetings/user/<user_id>', methods=['GET'])
+@require_auth
+def get_user_meetings(user_id):
+    """Obter reuniões do usuário"""
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, title, start_time, end_time, participants_detected, status
+            FROM meetings 
+            WHERE user_id = ?
+            ORDER BY start_time DESC
+            LIMIT 10
+        ''', (user['id'],))
+        
+        meetings = []
+        for row in cursor.fetchall():
+            meetings.append({
+                'id': row[0],
+                'title': row[1],
+                'start_time': row[2],
+                'end_time': row[3],
+                'participants_detected': row[4] or 0,
+                'status': row[5]
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'meetings': meetings,
+            'total': len(meetings)
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter reuniões: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/meetings/<meeting_id>/end', methods=['POST'])
+@require_auth
+def end_meeting(meeting_id):
+    """Finalizar reunião"""
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Usuário não autenticado'}), 401
+        
+        conn = sqlite3.connect(PRODUCTION_CONFIG['EMERGENCY_DATABASE'])
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE meetings 
+            SET end_time = ?, status = 'completed'
+            WHERE id = ? AND user_id = ?
+        ''', (datetime.now(), meeting_id, user['id']))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"📅 Reunião finalizada: {meeting_id}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': '✅ Reunião finalizada com sucesso',
+            'meeting_id': meeting_id,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao finalizar reunião: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/status')

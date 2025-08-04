@@ -1,0 +1,20 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[deploy.env]]
+name = "RAILWAY_ENVIRONMENT"
+value = "production"
+
+[[deploy.env]]
+name = "FLASK_ENV"
+value = "production"
+
+[[deploy.env]]
+name = "AUTO_INIT_DB"
+value = "true"

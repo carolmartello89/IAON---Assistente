@@ -1,8 +1,8 @@
 [variables]
-NIXPACKS_PYTHON_VERSION = "3.13"
+NIXPACKS_PYTHON_VERSION = "3.11"
 
 [phases.setup]
-nixPkgs = ["python313", "python313Packages.pip"]
+nixPkgs = ["python311", "python311Packages.pip"]
 
 [phases.install]
 cmds = [
@@ -15,3 +15,6 @@ cmds = ["echo 'Build phase completed'"]
 
 [start]
 cmd = "python run.py"
+
+[variables]
+PORT = "8000"

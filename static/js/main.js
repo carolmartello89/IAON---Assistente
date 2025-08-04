@@ -356,6 +356,9 @@ class IAON {
             case 'meetings':
                 await this.loadMeetingsData();
                 break;
+            case 'participants':
+                await this.loadParticipantsData();
+                break;
             default:
                 // No specific data loading needed
                 break;
@@ -424,6 +427,18 @@ class IAON {
             }
         } catch (error) {
             console.error('Error loading meetings data:', error);
+        }
+    }
+
+    async loadParticipantsData() {
+        try {
+            // Inicializar busca
+            searchParticipants();
+
+            // Carregar participantes
+            loadParticipants();
+        } catch (error) {
+            console.error('Error loading participants data:', error);
         }
     }
 
@@ -932,23 +947,31 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             this.voiceRecognition = new SpeechRecognition();
 
-            // Configurações do reconhecimento de voz
-            this.voiceRecognition.continuous = false;
-            this.voiceRecognition.interimResults = false;
+            // Configurações do reconhecimento de voz para interação contínua
+            this.voiceRecognition.continuous = true;  // Reconhecimento contínuo
+            this.voiceRecognition.interimResults = true;  // Resultados parciais
             this.voiceRecognition.lang = 'pt-BR';
-            this.voiceRecognition.maxAlternatives = 1;
+            this.voiceRecognition.maxAlternatives = 3;  // Mais alternativas para melhor precisão
 
             this.voiceRecognition.onstart = () => {
                 console.log('Voice recognition started');
-                this.updateVoiceStatus(true, '🎤 Ouvindo...');
+                this.updateVoiceStatus(true, '🎤 IAON está ouvindo...');
             };
 
             this.voiceRecognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                const confidence = event.results[0][0].confidence;
-                console.log('Voice recognition result:', transcript, 'Confidence:', confidence);
+                const lastResultIndex = event.results.length - 1;
+                const result = event.results[lastResultIndex];
 
-                this.handleVoiceInput(transcript);
+                if (result.isFinal) {
+                    const transcript = result[0].transcript.trim();
+                    const confidence = result[0].confidence;
+                    console.log('Voice recognition result:', transcript, 'Confidence:', confidence);
+
+                    // Só processa se tiver confiança mínima
+                    if (confidence > 0.3 && transcript.length > 2) {
+                        this.handleAdvancedVoiceInput(transcript, confidence);
+                    }
+                }
             };
 
             this.voiceRecognition.onerror = (event) => {
@@ -957,8 +980,9 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
 
                 switch (event.error) {
                     case 'no-speech':
-                        errorMessage += 'Nenhuma fala detectada';
-                        break;
+                        // Não mostrar erro para ausência de fala, é normal
+                        this.restartVoiceRecognition();
+                        return;
                     case 'audio-capture':
                         errorMessage += 'Microfone não encontrado';
                         break;
@@ -967,7 +991,8 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
                         break;
                     case 'network':
                         errorMessage += 'Problema de rede';
-                        break;
+                        this.restartVoiceRecognition();
+                        return;
                     default:
                         errorMessage += event.error;
                 }
@@ -978,13 +1003,29 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
 
             this.voiceRecognition.onend = () => {
                 console.log('Voice recognition ended');
-                this.updateVoiceStatus(false, 'Voz Inativa');
+                // Reiniciar automaticamente o reconhecimento para manter escuta contínua
+                if (this.isVoiceActive) {
+                    this.restartVoiceRecognition();
+                }
             };
 
-            console.log('Voice recognition setup completed');
+            console.log('Advanced voice recognition setup completed');
         } else {
             console.warn('Speech recognition not supported');
         }
+    }
+
+    restartVoiceRecognition() {
+        // Reinicia o reconhecimento após um pequeno delay para evitar loops
+        setTimeout(() => {
+            if (this.isVoiceActive && this.voiceRecognition) {
+                try {
+                    this.voiceRecognition.start();
+                } catch (error) {
+                    console.log('Voice recognition restart skipped (already running)');
+                }
+            }
+        }, 1000);
     }
 
     toggleVoiceRecognition() {
@@ -993,21 +1034,20 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
             return;
         }
 
-        // Verificar se o usuário tem biometria configurada
-        if (this.user && !this.user.voice_enabled) {
-            this.addMessageToChat('🔒 Configure sua biometria de voz primeiro para usar comandos seguros. Acesse as configurações.', 'ai');
-            return;
-        }
-
         if (this.isVoiceActive) {
             this.voiceRecognition.stop();
-            this.addMessageToChat('🔇 Reconhecimento de voz parado.', 'ai');
+            this.isVoiceActive = false;
+            this.updateVoiceStatus(false, 'Voz Inativa');
+            this.addMessageToChat('🔇 IAON parou de ouvir. Clique no microfone para reativar.', 'ai');
         } else {
             try {
+                this.isVoiceActive = true;
                 this.voiceRecognition.start();
-                this.addMessageToChat(`🎤 Reconhecimento de voz ativado, ${this.user?.preferred_name || 'usuário'}! Diga "IA" seguido do comando para ações específicas.`, 'ai');
+                this.addMessageToChat(`🎤 IAON está agora em modo de escuta contínua! Pode falar naturalmente comigo, ${this.user?.preferred_name || 'usuário'}. Para comandos específicos, diga "IAON" seguido da instrução.`, 'ai');
+                this.addMessageToChat(`💡 <strong>Dica:</strong> Agora posso responder a qualquer coisa que você disser! Experimente dizer "Oi IAON" ou fazer uma pergunta.`, 'ai');
             } catch (error) {
                 console.error('Error starting voice recognition:', error);
+                this.isVoiceActive = false;
                 this.addMessageToChat('❌ Erro ao iniciar reconhecimento de voz. Verifique as permissões do microfone.', 'ai');
             }
         }
@@ -1025,6 +1065,269 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
         } else {
             // Regular chat message - enviar como mensagem normal
             this.sendChatMessage(transcript);
+        }
+    }
+
+    async handleAdvancedVoiceInput(transcript, confidence) {
+        console.log('Advanced voice input received:', transcript, 'Confidence:', confidence);
+
+        // Filtrar ruídos e palavras muito curtas
+        const cleanTranscript = transcript.trim();
+        if (cleanTranscript.length < 3) return;
+
+        // Verificar se é um comando direto ou conversa natural
+        const lowerTranscript = cleanTranscript.toLowerCase();
+
+        // Palavras de ativação do IAON
+        const activationWords = ['iaon', 'eion', 'aion', 'ia'];
+        const isDirectCommand = activationWords.some(word => lowerTranscript.startsWith(word + ' '));
+
+        // Detectar saudações e conversas casuais
+        const greetings = ['oi', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'hey', 'ei'];
+        const questions = ['como', 'o que', 'onde', 'quando', 'por que', 'qual'];
+        const conversationalWords = ['obrigado', 'obrigada', 'valeu', 'legal', 'interessante', 'entendi'];
+
+        const isGreeting = greetings.some(greeting => lowerTranscript.includes(greeting));
+        const isQuestion = questions.some(question => lowerTranscript.startsWith(question));
+        const isConversational = conversationalWords.some(word => lowerTranscript.includes(word));
+        const hasIAONReference = lowerTranscript.includes('iaon') || lowerTranscript.includes('assistente');
+
+        // Mostrar o que foi reconhecido com indicador de confiança
+        const confidenceIcon = confidence > 0.8 ? '🎯' : confidence > 0.6 ? '📍' : '💭';
+        this.addMessageToChat(`${confidenceIcon} "${cleanTranscript}"`, 'user');
+
+        // Decidir como responder
+        if (isDirectCommand) {
+            // Comando direto para o IAON
+            await this.handleVoiceCommand(cleanTranscript);
+        } else if (isGreeting || isQuestion || isConversational || hasIAONReference || confidence > 0.7) {
+            // Conversa natural - IAON deve responder
+            await this.handleNaturalConversation(cleanTranscript, confidence);
+        } else if (confidence > 0.5) {
+            // Fala detectada mas não tem certeza se é para o IAON
+            await this.handleAmbiguousInput(cleanTranscript, confidence);
+        }
+        // Se confiança muito baixa, ignora silenciosamente
+    }
+
+    async handleNaturalConversation(text, confidence) {
+        console.log('Processing natural conversation:', text);
+
+        // Mostrar que está processando
+        const typingIndicator = this.showTypingIndicator();
+
+        try {
+            // Analisar sentimento e contexto
+            const sentimentResponse = await this.analyzeSentiment(text);
+
+            // Gerar resposta contextual baseada no que foi dito
+            const response = await this.generateContextualResponse(text, sentimentResponse, confidence);
+
+            // Remover indicador de digitação
+            this.removeTypingIndicator(typingIndicator);
+
+            // Mostrar resposta do IAON
+            this.addMessageToChat(response, 'ai');
+
+            // Se disponível, também falar a resposta
+            this.speakResponse(response);
+
+        } catch (error) {
+            console.error('Error in natural conversation:', error);
+            this.removeTypingIndicator(typingIndicator);
+
+            // Resposta de fallback
+            const fallbackResponses = [
+                "🤖 Interessante! Conte-me mais sobre isso.",
+                "💭 Entendi. O que mais você gostaria de saber?",
+                "🎯 Posso ajudá-lo com algo específico?",
+                "✨ Estou aqui para conversar e ajudar no que precisar.",
+                "🔍 Tem alguma tarefa que eu possa executar para você?"
+            ];
+
+            const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+            this.addMessageToChat(randomResponse, 'ai');
+        }
+    }
+
+    async handleAmbiguousInput(text, confidence) {
+        // Para entradas ambíguas, responder de forma sutil
+        const subtleResponses = [
+            "🤔 Hmm...",
+            "👂 Estou ouvindo...",
+            "💡 Posso ajudar?",
+            "🎯 Precisa de algo?"
+        ];
+
+        // Só responder ocasionalmente para não ser intrusivo
+        if (Math.random() < 0.3) {
+            const response = subtleResponses[Math.floor(Math.random() * subtleResponses.length)];
+            this.addMessageToChat(response, 'ai');
+        }
+    }
+
+    async analyzeSentiment(text) {
+        try {
+            const response = await fetch('/api/iaon/analyze-sentiment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            });
+
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Error analyzing sentiment:', error);
+        }
+
+        // Fallback: análise básica local
+        return this.basicSentimentAnalysis(text);
+    }
+
+    basicSentimentAnalysis(text) {
+        const lowerText = text.toLowerCase();
+
+        const positiveWords = ['bom', 'ótimo', 'legal', 'obrigado', 'feliz', 'perfeito', 'adorei'];
+        const negativeWords = ['ruim', 'problema', 'erro', 'chato', 'difícil', 'triste'];
+
+        const positiveCount = positiveWords.filter(word => lowerText.includes(word)).length;
+        const negativeCount = negativeWords.filter(word => lowerText.includes(word)).length;
+
+        let sentiment = 'neutral';
+        if (positiveCount > negativeCount) sentiment = 'positive';
+        else if (negativeCount > positiveCount) sentiment = 'negative';
+
+        return {
+            sentiment,
+            confidence: 0.6,
+            emotions: {
+                joy: positiveCount > 0,
+                sadness: negativeCount > 0
+            }
+        };
+    }
+
+    async generateContextualResponse(text, sentimentData, confidence) {
+        const lowerText = text.toLowerCase();
+        const sentiment = sentimentData.sentiment;
+
+        // Respostas baseadas em padrões detectados
+        if (lowerText.includes('oi') || lowerText.includes('olá')) {
+            const greetings = [
+                "👋 Olá! Como posso ajudá-lo hoje?",
+                "🌟 Oi! Estou aqui para qualquer coisa que precisar!",
+                "😊 Olá! Pronto para uma conversa interessante?"
+            ];
+            return greetings[Math.floor(Math.random() * greetings.length)];
+        }
+
+        if (lowerText.includes('como você está') || lowerText.includes('tudo bem')) {
+            return "🤖 Estou funcionando perfeitamente! Todos os meus sistemas estão operacionais. E você, como está?";
+        }
+
+        if (lowerText.includes('obrigado') || lowerText.includes('obrigada') || lowerText.includes('valeu')) {
+            return "😊 Por nada! Sempre um prazer ajudar. Precisa de mais alguma coisa?";
+        }
+
+        if (lowerText.includes('help') || lowerText.includes('ajuda')) {
+            return "🆘 Claro! Posso ajudar com agenda, reuniões, sistema médico, finanças, contatos e muito mais. O que você precisa?";
+        }
+
+        // Respostas baseadas no sentimento
+        if (sentiment === 'positive') {
+            const positiveResponses = [
+                "😄 Que ótimo! Fico feliz em saber disso!",
+                "✨ Excelente! Posso ajudar em mais alguma coisa?",
+                "🎉 Fantástico! Conte-me mais!"
+            ];
+            return positiveResponses[Math.floor(Math.random() * positiveResponses.length)];
+        }
+
+        if (sentiment === 'negative') {
+            const supportiveResponses = [
+                "😔 Entendo sua preocupação. Como posso ajudar a melhorar isso?",
+                "🤝 Sinto muito por isso. Estou aqui para ajudar no que for preciso.",
+                "💙 Pode contar comigo. Vamos resolver isso juntos!"
+            ];
+            return supportiveResponses[Math.floor(Math.random() * supportiveResponses.length)];
+        }
+
+        // Respostas para perguntas
+        if (lowerText.includes('o que você') || lowerText.includes('o que é')) {
+            return "🤖 Sou o IAON, seu assistente IA avançado! Posso ajudar com tarefas do dia a dia, organização, saúde, finanças e muito mais. O que gostaria de saber?";
+        }
+
+        if (lowerText.includes('que horas') || lowerText.includes('hora')) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('pt-BR');
+            return `🕐 Agora são ${timeString}. Posso ajudar com algo relacionado ao tempo ou agenda?`;
+        }
+
+        // Resposta contextual padrão
+        const contextualResponses = [
+            "🤔 Interessante! Pode me contar mais detalhes?",
+            "💭 Entendi. Como posso ajudar com isso?",
+            "🎯 Posso fazer algo específico para ajudar?",
+            "✨ Conte-me mais sobre isso, estou curioso!",
+            "🔍 Tem alguma tarefa relacionada que eu possa executar?"
+        ];
+
+        return contextualResponses[Math.floor(Math.random() * contextualResponses.length)];
+    }
+
+    showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'ai-bubble chat-bubble p-3 rounded-lg text-white typing-indicator';
+        typingDiv.innerHTML = `
+            <div class="flex items-center space-x-2">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span class="text-sm opacity-75">IAON está digitando...</span>
+            </div>
+        `;
+
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        return typingDiv;
+    }
+
+    removeTypingIndicator(indicator) {
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+        }
+    }
+
+    speakResponse(text) {
+        // Limpar texto de emojis e caracteres especiais para síntese de voz
+        const cleanText = text.replace(/[^\w\s\.,!?]/g, '').trim();
+
+        if ('speechSynthesis' in window && cleanText.length > 0) {
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.1;
+            utterance.volume = 0.8;
+
+            // Tentar usar uma voz feminina se disponível
+            const voices = speechSynthesis.getVoices();
+            const femaleVoice = voices.find(voice =>
+                voice.lang.includes('pt') &&
+                (voice.name.includes('Female') || voice.name.includes('feminina'))
+            );
+
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
+            }
+
+            speechSynthesis.speak(utterance);
         }
     }
 
@@ -1140,13 +1443,34 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
 
         const indicator = document.getElementById('voice-indicator');
         const statusText = document.getElementById('voice-text');
+        const intelligenceIndicator = document.getElementById('intelligence-indicator');
+        const floatingButton = document.getElementById('floating-voice');
 
         if (indicator) {
-            indicator.className = `w-3 h-3 rounded-full ${active ? 'bg-green-500 voice-animation' : 'bg-red-500'}`;
+            if (active) {
+                indicator.className = 'w-3 h-3 rounded-full voice-listening';
+            } else {
+                indicator.className = 'w-3 h-3 rounded-full bg-red-500';
+            }
         }
 
         if (statusText) {
             statusText.textContent = text;
+            statusText.className = active ? 'text-sm text-green-600 font-medium hidden sm:block' : 'text-sm text-gray-600 hidden sm:block';
+        }
+
+        if (intelligenceIndicator) {
+            intelligenceIndicator.style.display = active ? 'block' : 'none';
+        }
+
+        if (floatingButton) {
+            if (active) {
+                floatingButton.classList.add('listening');
+                floatingButton.title = 'IAON está ouvindo... Clique para desativar';
+            } else {
+                floatingButton.classList.remove('listening');
+                floatingButton.title = 'Clique para ativar escuta contínua do IAON';
+            }
         }
     }
 
@@ -1381,12 +1705,200 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
             return;
         }
 
+        // Mostrar opções: adicionar conhecido ou novo participante
+        const choice = await this.showParticipantSelectionModal();
+
+        if (choice === 'known') {
+            // Mostrar lista de participantes conhecidos
+            await this.showKnownParticipantsModal();
+        } else if (choice === 'new') {
+            // Adicionar novo participante
+            await this.addNewParticipantToMeeting();
+        }
+    }
+
+    // Modal para selecionar tipo de participante
+    async showParticipantSelectionModal() {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                    <h3 class="text-lg font-semibold mb-4">Adicionar Participante</h3>
+                    <p class="text-gray-600 mb-6">Como deseja adicionar o participante?</p>
+                    <div class="space-y-3">
+                        <button onclick="selectChoice('known')" 
+                                class="w-full p-4 text-left border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="users" class="w-5 h-5 text-purple-500"></i>
+                                <div>
+                                    <h4 class="font-medium">Participante Conhecido</h4>
+                                    <p class="text-sm text-gray-600">Escolher da lista de participantes salvos</p>
+                                </div>
+                            </div>
+                        </button>
+                        <button onclick="selectChoice('new')" 
+                                class="w-full p-4 text-left border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="user-plus" class="w-5 h-5 text-blue-500"></i>
+                                <div>
+                                    <h4 class="font-medium">Novo Participante</h4>
+                                    <p class="text-sm text-gray-600">Adicionar participante e salvar para futuras reuniões</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                    <button onclick="selectChoice('cancel')" 
+                            class="w-full mt-4 p-2 text-gray-600 hover:text-gray-800">
+                        Cancelar
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Função para selecionar escolha
+            window.selectChoice = (choice) => {
+                document.body.removeChild(modal);
+                delete window.selectChoice;
+                resolve(choice);
+            };
+
+            // Inicializar ícones
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+    }
+
+    // Modal para selecionar participante conhecido
+    async showKnownParticipantsModal() {
+        try {
+            const response = await fetch('/api/known-participants');
+            const data = await response.json();
+
+            if (!response.ok) {
+                this.addMessageToChat('❌ Erro ao carregar participantes conhecidos.', 'ai');
+                return;
+            }
+
+            const participants = data.participants;
+
+            if (participants.length === 0) {
+                this.addMessageToChat('📋 Nenhum participante conhecido encontrado. Vamos adicionar um novo!', 'ai');
+                await this.addNewParticipantToMeeting();
+                return;
+            }
+
+            return new Promise((resolve) => {
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-96 overflow-hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Selecionar Participante Conhecido</h3>
+                            <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <div class="mb-4">
+                            <input type="text" id="search-participants" placeholder="Buscar participante..." 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        <div class="max-h-64 overflow-y-auto space-y-2" id="participants-list-modal">
+                            ${participants.map(p => `
+                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-purple-50 cursor-pointer participant-item" 
+                                     data-participant='${JSON.stringify(p)}' onclick="selectParticipant(${p.id})">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h4 class="font-medium">${p.name}</h4>
+                                            <p class="text-sm text-gray-600">${p.email || 'Sem email'} • ${p.company || 'Sem empresa'}</p>
+                                            <p class="text-xs text-gray-500">${p.meeting_count} reuniões • ${p.is_frequent ? 'Frequente' : 'Ocasional'}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">${p.default_role}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Função de busca
+                const searchInput = document.getElementById('search-participants');
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase();
+                    const items = document.querySelectorAll('.participant-item');
+                    items.forEach(item => {
+                        const participant = JSON.parse(item.dataset.participant);
+                        const matches = participant.name.toLowerCase().includes(query) ||
+                            (participant.email && participant.email.toLowerCase().includes(query)) ||
+                            (participant.company && participant.company.toLowerCase().includes(query));
+                        item.style.display = matches ? 'block' : 'none';
+                    });
+                });
+
+                // Funções do modal
+                window.closeModal = () => {
+                    document.body.removeChild(modal);
+                    delete window.closeModal;
+                    delete window.selectParticipant;
+                    resolve(null);
+                };
+
+                window.selectParticipant = async (participantId) => {
+                    try {
+                        const response = await this.callAPI(`/api/meetings/${this.currentMeeting.id}/add-participant`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                known_participant_id: participantId
+                            })
+                        });
+
+                        if (response.success) {
+                            this.meetingParticipants.push(response.participant);
+                            this.updateParticipantsList();
+                            this.addMessageToChat(`👤 ${response.message}`, 'ai');
+
+                            if (response.is_frequent) {
+                                this.addMessageToChat(`⭐ Este é um participante frequente (${response.meeting_count} reuniões)!`, 'ai');
+                            }
+                        }
+
+                        window.closeModal();
+                    } catch (error) {
+                        console.error('Error adding known participant:', error);
+                        this.addMessageToChat('❌ Erro ao adicionar participante.', 'ai');
+                        window.closeModal();
+                    }
+                };
+
+                // Inicializar ícones
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+            });
+
+        } catch (error) {
+            console.error('Error loading known participants:', error);
+            this.addMessageToChat('❌ Erro ao carregar participantes conhecidos.', 'ai');
+        }
+    }
+
+    // Adicionar novo participante à reunião
+    async addNewParticipantToMeeting() {
         try {
             const participantName = prompt('Nome do participante:');
-            const participantRole = prompt('Função (moderador/participante/convidado):') || 'participante';
-            const email = prompt('Email (opcional):') || '';
-
             if (!participantName) return;
+
+            const email = prompt('Email (opcional):') || '';
+            const company = prompt('Empresa (opcional):') || '';
+            const position = prompt('Cargo (opcional):') || '';
+            const participantRole = prompt('Função (moderador/participante/apresentador/convidado):') || 'participante';
+            const phone = prompt('Telefone (opcional):') || '';
 
             const response = await this.callAPI(`/api/meetings/${this.currentMeeting.id}/add-participant`, {
                 method: 'POST',
@@ -1394,6 +1906,9 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
                     participant_name: participantName,
                     participant_role: participantRole,
                     email: email,
+                    company: company,
+                    position: position,
+                    phone: phone,
                     voice_sample: '' // Em produção, coletar amostra de voz
                 })
             });
@@ -1402,9 +1917,13 @@ Acesse as configurações para personalizar sua palavra de ativação ("${trigge
                 this.meetingParticipants.push(response.participant);
                 this.updateParticipantsList();
                 this.addMessageToChat(`👤 ${response.message}`, 'ai');
+
+                if (response.known_participant) {
+                    this.addMessageToChat(`💾 Participante salvo para futuras reuniões!`, 'ai');
+                }
             }
         } catch (error) {
-            console.error('Error adding participant:', error);
+            console.error('Error adding new participant:', error);
             this.addMessageToChat('❌ Erro ao adicionar participante.', 'ai');
         }
     }
@@ -1779,5 +2298,703 @@ console.log(`
 // Check if running as PWA
 if (window.matchMedia('(display-mode: standalone)').matches) {
     console.log('📱 Executando como PWA!');
+}
+
+// ==================== SISTEMA DE PARTICIPANTES CONHECIDOS ====================
+
+class ParticipantManager {
+    constructor() {
+        this.participants = [];
+        this.currentFilter = 'all';
+        this.editingParticipant = null;
+    }
+
+    // Carregar participantes conhecidos
+    async loadKnownParticipants() {
+        try {
+            const response = await fetch('/api/known-participants');
+            const data = await response.json();
+
+            if (response.ok) {
+                this.participants = data.participants;
+                this.renderParticipantsList();
+                this.updateParticipantsCount();
+            } else {
+                console.error('Erro ao carregar participantes:', data.error);
+            }
+        } catch (error) {
+            console.error('Erro na requisição:', error);
+        }
+    }
+
+    // Renderizar lista de participantes
+    renderParticipantsList() {
+        const container = document.getElementById('participants-list');
+        if (!container) return;
+
+        let filteredParticipants = this.participants;
+
+        // Aplicar filtros
+        if (this.currentFilter === 'frequent') {
+            filteredParticipants = this.participants.filter(p => p.is_frequent);
+        } else if (this.currentFilter === 'recent') {
+            const recentDate = new Date();
+            recentDate.setDate(recentDate.getDate() - 30);
+            filteredParticipants = this.participants.filter(p =>
+                p.last_meeting_date && new Date(p.last_meeting_date) > recentDate
+            );
+        }
+
+        if (filteredParticipants.length === 0) {
+            container.innerHTML = `
+                <div class="p-8 text-center text-gray-500">
+                    <i data-lucide="users" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                    <p>Nenhum participante encontrado</p>
+                    <button onclick="showAddParticipantModal()" 
+                            class="mt-4 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
+                        Adicionar Primeiro Participante
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        const html = filteredParticipants.map(participant => this.renderParticipantCard(participant)).join('');
+        container.innerHTML = html;
+
+        // Re-inicializar ícones Lucide
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    // Renderizar card de participante
+    renderParticipantCard(participant) {
+        const lastMeeting = participant.last_meeting_date ?
+            new Date(participant.last_meeting_date).toLocaleDateString('pt-BR') : 'Nunca';
+
+        const frequentBadge = participant.is_frequent ?
+            '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Frequente</span>' : '';
+
+        return `
+            <div class="p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span class="text-purple-600 font-semibold text-lg">${participant.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h4 class="font-semibold text-gray-900">${participant.name}</h4>
+                                ${frequentBadge}
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${participant.default_role}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 space-y-1">
+                                ${participant.email ? `<div class="flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> ${participant.email}</div>` : ''}
+                                ${participant.company ? `<div class="flex items-center gap-1"><i data-lucide="building" class="w-3 h-3"></i> ${participant.company}</div>` : ''}
+                                <div class="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                                    <span class="flex items-center gap-1">
+                                        <i data-lucide="calendar" class="w-3 h-3"></i>
+                                        ${participant.meeting_count} reuniões
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <i data-lucide="clock" class="w-3 h-3"></i>
+                                        Último: ${lastMeeting}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="participantManager.addToMeeting(${participant.id})" 
+                                class="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors" 
+                                title="Adicionar à Reunião Atual">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="participantManager.editParticipant(${participant.id})" 
+                                class="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors" 
+                                title="Editar">
+                            <i data-lucide="edit" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="participantManager.deleteParticipant(${participant.id})" 
+                                class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors" 
+                                title="Excluir">
+                            <i data-lucide="trash" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Atualizar contador de participantes
+    updateParticipantsCount() {
+        const countElement = document.getElementById('participants-count');
+        if (countElement) {
+            const total = this.participants.length;
+            const frequent = this.participants.filter(p => p.is_frequent).length;
+            countElement.textContent = `${total} participantes cadastrados • ${frequent} frequentes`;
+        }
+    }
+
+    // Salvar participante
+    async saveParticipant(formData) {
+        try {
+            const url = this.editingParticipant ?
+                `/api/known-participants/${this.editingParticipant.id}` :
+                '/api/known-participants';
+
+            const method = this.editingParticipant ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                await this.loadKnownParticipants(); // Recarregar lista
+                return { success: true, message: data.message };
+            } else {
+                return { success: false, message: data.error };
+            }
+        } catch (error) {
+            console.error('Erro ao salvar participante:', error);
+            return { success: false, message: 'Erro na conexão' };
+        }
+    }
+
+    // Editar participante
+    editParticipant(participantId) {
+        this.editingParticipant = this.participants.find(p => p.id === participantId);
+        if (this.editingParticipant) {
+            showAddParticipantModal(this.editingParticipant);
+        }
+    }
+
+    // Excluir participante
+    async deleteParticipant(participantId) {
+        if (!confirm('Tem certeza que deseja excluir este participante?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/known-participants/${participantId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                await this.loadKnownParticipants(); // Recarregar lista
+                iaon.showMessage('Participante excluído com sucesso', 'success');
+            } else {
+                iaon.showMessage(data.error, 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir participante:', error);
+            iaon.showMessage('Erro na conexão', 'error');
+        }
+    }
+
+    // Adicionar participante à reunião atual
+    async addToMeeting(participantId) {
+        if (!iaon.currentMeeting) {
+            iaon.showMessage('Nenhuma reunião ativa. Inicie uma reunião primeiro.', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/meetings/${iaon.currentMeeting.id}/add-participant`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    known_participant_id: participantId
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                iaon.showMessage(data.message, 'success');
+                // Atualizar lista de participantes da reunião se necessário
+                if (iaon.loadMeetingParticipants) {
+                    iaon.loadMeetingParticipants();
+                }
+            } else {
+                iaon.showMessage(data.error, 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao adicionar participante à reunião:', error);
+            iaon.showMessage('Erro na conexão', 'error');
+        }
+    }
+
+    // Buscar participantes
+    searchParticipants(query) {
+        const searchInput = document.getElementById('participant-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filtered = this.participants.filter(p =>
+                    p.name.toLowerCase().includes(searchTerm) ||
+                    (p.email && p.email.toLowerCase().includes(searchTerm)) ||
+                    (p.company && p.company.toLowerCase().includes(searchTerm))
+                );
+
+                // Renderizar resultados filtrados
+                this.renderFilteredResults(filtered);
+            });
+        }
+    }
+
+    // Renderizar resultados filtrados
+    renderFilteredResults(filtered) {
+        const container = document.getElementById('participants-list');
+        if (!container) return;
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="p-8 text-center text-gray-500">
+                    <i data-lucide="search" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                    <p>Nenhum participante encontrado</p>
+                </div>
+            `;
+            return;
+        }
+
+        const html = filtered.map(participant => this.renderParticipantCard(participant)).join('');
+        container.innerHTML = html;
+
+        // Re-inicializar ícones Lucide
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    // Aplicar filtro
+    applyFilter(filter) {
+        this.currentFilter = filter;
+        this.renderParticipantsList();
+
+        // Atualizar botões de filtro
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active', 'bg-purple-100', 'border-purple-500');
+        });
+
+        const activeBtn = document.querySelector(`button[onclick="filterParticipants('${filter}')"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active', 'bg-purple-100', 'border-purple-500');
+        }
+    }
+
+    // Sugerir participantes para reunião
+    async suggestParticipants(query) {
+        try {
+            const response = await fetch('/api/participants/suggest', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: query })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                return data.suggestions;
+            } else {
+                console.error('Erro ao buscar sugestões:', data.error);
+                return [];
+            }
+        } catch (error) {
+            console.error('Erro na requisição:', error);
+            return [];
+        }
+    }
+}
+
+// Instância global do gerenciador de participantes
+const participantManager = new ParticipantManager();
+
+// Funções globais para interface
+function showAddParticipantModal(participant = null) {
+    const modal = document.getElementById('participant-modal');
+    const title = document.getElementById('modal-title');
+    const form = document.getElementById('participant-form');
+
+    if (participant) {
+        // Modo edição
+        title.textContent = 'Editar Participante';
+        document.getElementById('edit-participant-id').value = participant.id;
+        document.getElementById('participant-name').value = participant.name || '';
+        document.getElementById('participant-email').value = participant.email || '';
+        document.getElementById('participant-phone').value = participant.phone || '';
+        document.getElementById('participant-company').value = participant.company || '';
+        document.getElementById('participant-position').value = participant.position || '';
+        document.getElementById('participant-role').value = participant.default_role || 'participante';
+        document.getElementById('participant-notes').value = participant.notes || '';
+        participantManager.editingParticipant = participant;
+    } else {
+        // Modo criação
+        title.textContent = 'Novo Participante';
+        form.reset();
+        document.getElementById('edit-participant-id').value = '';
+        participantManager.editingParticipant = null;
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function closeParticipantModal() {
+    const modal = document.getElementById('participant-modal');
+    modal.classList.add('hidden');
+    participantManager.editingParticipant = null;
+}
+
+async function saveParticipant(event) {
+    event.preventDefault();
+
+    const formData = {
+        name: document.getElementById('participant-name').value,
+        email: document.getElementById('participant-email').value,
+        phone: document.getElementById('participant-phone').value,
+        company: document.getElementById('participant-company').value,
+        position: document.getElementById('participant-position').value,
+        default_role: document.getElementById('participant-role').value,
+        notes: document.getElementById('participant-notes').value
+    };
+
+    const result = await participantManager.saveParticipant(formData);
+
+    if (result.success) {
+        closeParticipantModal();
+        iaon.showMessage(result.message, 'success');
+    } else {
+        iaon.showMessage(result.message, 'error');
+    }
+}
+
+function filterParticipants(filter) {
+    participantManager.applyFilter(filter);
+}
+
+// Inicializar sistema de participantes quando a seção for carregada
+document.addEventListener('DOMContentLoaded', function () {
+    // Carregar participantes quando navegar para a seção
+    const navLinks = document.querySelectorAll('[data-section="participants"]');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function () {
+            setTimeout(() => {
+                participantManager.loadKnownParticipants();
+                participantManager.searchParticipants();
+            }, 100);
+        });
+    });
+});
+
+// ==================== FUNÇÕES GLOBAIS PARA GERENCIAR PARTICIPANTES ====================
+
+// Variável global para filtro atual
+let currentParticipantFilter = 'all';
+
+// Mostrar modal para adicionar participante
+function showAddParticipantModal() {
+    document.getElementById('modal-title').textContent = 'Novo Participante';
+    document.getElementById('edit-participant-id').value = '';
+    document.getElementById('participant-form').reset();
+    document.getElementById('participant-modal').classList.remove('hidden');
+}
+
+// Fechar modal de participante
+function closeParticipantModal() {
+    document.getElementById('participant-modal').classList.add('hidden');
+}
+
+// Editar participante
+function editParticipant(participantId) {
+    fetch(`/api/known-participants/${participantId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                document.getElementById('modal-title').textContent = 'Editar Participante';
+                document.getElementById('edit-participant-id').value = data.id;
+                document.getElementById('participant-name').value = data.name || '';
+                document.getElementById('participant-email').value = data.email || '';
+                document.getElementById('participant-phone').value = data.phone || '';
+                document.getElementById('participant-company').value = data.company || '';
+                document.getElementById('participant-position').value = data.position || '';
+                document.getElementById('participant-role').value = data.default_role || 'participante';
+                document.getElementById('participant-notes').value = data.notes || '';
+                document.getElementById('participant-modal').classList.remove('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar participante:', error);
+            iaon.showMessage('Erro ao carregar dados do participante', 'error');
+        });
+}
+
+// Salvar participante
+function saveParticipant(event) {
+    event.preventDefault();
+
+    const participantId = document.getElementById('edit-participant-id').value;
+    const isEdit = participantId !== '';
+
+    const data = {
+        name: document.getElementById('participant-name').value,
+        email: document.getElementById('participant-email').value,
+        phone: document.getElementById('participant-phone').value,
+        company: document.getElementById('participant-company').value,
+        position: document.getElementById('participant-position').value,
+        default_role: document.getElementById('participant-role').value,
+        notes: document.getElementById('participant-notes').value
+    };
+
+    const url = isEdit ? `/api/known-participants/${participantId}` : '/api/known-participants';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => response.json())
+        .then(result => {
+            if (result.participant || result.message) {
+                iaon.showMessage(result.message || (isEdit ? 'Participante atualizado!' : 'Participante adicionado!'), 'success');
+                closeParticipantModal();
+                loadParticipants();
+            } else {
+                iaon.showMessage(result.error || 'Erro ao salvar participante', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao salvar participante:', error);
+            iaon.showMessage('Erro na conexão', 'error');
+        });
+}
+
+// Excluir participante
+function deleteParticipant(participantId, participantName) {
+    if (confirm(`Tem certeza que deseja excluir o participante "${participantName}"?`)) {
+        fetch(`/api/known-participants/${participantId}`, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.message) {
+                    iaon.showMessage(result.message, 'success');
+                    loadParticipants();
+                } else {
+                    iaon.showMessage(result.error || 'Erro ao excluir participante', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao excluir participante:', error);
+                iaon.showMessage('Erro na conexão', 'error');
+            });
+    }
+}
+
+// Carregar lista de participantes
+function loadParticipants() {
+    fetch('/api/known-participants')
+        .then(response => response.json())
+        .then(data => {
+            if (data.participants) {
+                displayParticipants(data.participants);
+                updateParticipantsCount(data.total);
+            } else {
+                iaon.showMessage(data.error || 'Erro ao carregar participantes', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar participantes:', error);
+            document.getElementById('participants-list').innerHTML = `
+                <div class="p-8 text-center text-red-500">
+                    <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-4"></i>
+                    <p>Erro ao carregar participantes</p>
+                </div>
+            `;
+        });
+}
+
+// Exibir participantes na lista
+function displayParticipants(participants) {
+    const container = document.getElementById('participants-list');
+
+    if (participants.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center text-gray-500">
+                <i data-lucide="users" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                <p class="text-lg font-medium mb-2">Nenhum participante encontrado</p>
+                <p class="text-sm">Adicione participantes para começar a usar o sistema de memória inteligente</p>
+                <button onclick="showAddParticipantModal()" 
+                        class="mt-4 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                    Adicionar Primeiro Participante
+                </button>
+            </div>
+        `;
+        lucide.createIcons();
+        return;
+    }
+
+    // Filtrar participantes baseado no filtro atual
+    let filteredParticipants = participants;
+    if (currentParticipantFilter === 'frequent') {
+        filteredParticipants = participants.filter(p => p.is_frequent);
+    } else if (currentParticipantFilter === 'recent') {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        filteredParticipants = participants.filter(p =>
+            p.last_meeting_date && new Date(p.last_meeting_date) > thirtyDaysAgo
+        );
+    }
+
+    container.innerHTML = filteredParticipants.map(participant => `
+        <div class="p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <h4 class="font-medium text-gray-900">${participant.name}</h4>
+                        ${participant.is_frequent ? '<span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Frequente</span>' : ''}
+                        <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">${participant.default_role}</span>
+                    </div>
+                    <div class="text-sm text-gray-600 space-y-1">
+                        ${participant.email ? `<div class="flex items-center gap-2"><i data-lucide="mail" class="w-3 h-3"></i>${participant.email}</div>` : ''}
+                        ${participant.phone ? `<div class="flex items-center gap-2"><i data-lucide="phone" class="w-3 h-3"></i>${participant.phone}</div>` : ''}
+                        ${participant.company ? `<div class="flex items-center gap-2"><i data-lucide="building" class="w-3 h-3"></i>${participant.company}${participant.position ? ` - ${participant.position}` : ''}</div>` : ''}
+                        <div class="flex items-center gap-4 mt-2">
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="calendar" class="w-3 h-3"></i>
+                                ${participant.meeting_count} reuniões
+                            </span>
+                            ${participant.last_meeting_date ? `
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="clock" class="w-3 h-3"></i>
+                                    ${new Date(participant.last_meeting_date).toLocaleDateString('pt-BR')}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ${participant.notes ? `<div class="text-sm text-gray-500 mt-2 italic">${participant.notes}</div>` : ''}
+                </div>
+                <div class="flex items-center gap-2 ml-4">
+                    <button onclick="editParticipant(${participant.id})"
+                            class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar">
+                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="deleteParticipant(${participant.id}, '${participant.name}')"
+                            class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Excluir">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                    ${iaon.currentMeeting ? `
+                        <button onclick="addParticipantToCurrentMeeting(${participant.id})"
+                                class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Adicionar à reunião atual">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Recrear ícones
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+// Atualizar contador de participantes
+function updateParticipantsCount(total) {
+    const countElement = document.getElementById('participants-count');
+    if (countElement) {
+        countElement.textContent = `${total} participante${total !== 1 ? 's' : ''} cadastrado${total !== 1 ? 's' : ''}`;
+    }
+}
+
+// Filtrar participantes
+function filterParticipants(filter) {
+    currentParticipantFilter = filter;
+
+    // Atualizar botões de filtro
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-gray-200', 'border-gray-400');
+        btn.classList.add('bg-gray-100', 'border-gray-300');
+    });
+
+    const activeBtn = document.querySelector(`[onclick="filterParticipants('${filter}')"]`);
+    if (activeBtn) {
+        activeBtn.classList.remove('bg-gray-100', 'border-gray-300');
+        activeBtn.classList.add('active', 'bg-gray-200', 'border-gray-400');
+    }
+
+    // Recarregar lista com filtro
+    loadParticipants();
+}
+
+// Adicionar participante à reunião atual
+function addParticipantToCurrentMeeting(participantId) {
+    if (!iaon.currentMeeting) {
+        iaon.showMessage('Nenhuma reunião ativa', 'warning');
+        return;
+    }
+
+    fetch(`/api/meetings/${iaon.currentMeeting.id}/add-participant`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            known_participant_id: participantId
+        })
+    })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                iaon.meetingParticipants.push(result.participant);
+                iaon.updateParticipantsList();
+                iaon.showMessage(result.message, 'success');
+
+                if (result.is_frequent) {
+                    iaon.showMessage(`⭐ Participante frequente adicionado! (${result.meeting_count} reuniões)`, 'info');
+                }
+            } else {
+                iaon.showMessage(result.error || 'Erro ao adicionar participante', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao adicionar participante à reunião:', error);
+            iaon.showMessage('Erro na conexão', 'error');
+        });
+}
+
+// Buscar participantes
+function searchParticipants() {
+    const searchInput = document.getElementById('participant-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const participantItems = document.querySelectorAll('#participants-list > div');
+
+            participantItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+    }
 }
 

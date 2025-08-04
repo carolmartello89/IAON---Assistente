@@ -28,6 +28,331 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
+        .iaon-logo {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            word-wrap: break-word;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .user-bubble {
+            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-bubble {
+            background: linear-gradient(135deg, #059669, #047857);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .voice-animation {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .nav-link.active {
+            background-color: #EBF8FF;
+            color: #2563EB;
+        }
+
+        .section {
+            display: block;
+        }
+
+        .section.hidden {
+            display: none;
+        }
+
+        /* Animação de digitação do IAON */
+        .typing-indicator {
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            animation: typingPulse 1.4s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0s;
+        }
+
+        @keyframes typingPulse {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            40% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* Indicador de status de voz avançado */
+        .voice-status-advanced {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .voice-listening {
+            background: linear-gradient(45deg, #10B981, #059669) !important;
+            animation: voiceListening 2s infinite;
+        }
+
+        @keyframes voiceListening {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 15px rgba(16, 185, 129, 0.8);
+            }
+        }
+
+        /* Feedback visual para diferentes níveis de confiança */
+        .confidence-high {
+            border-left: 4px solid #10B981;
+        }
+
+        .confidence-medium {
+            border-left: 4px solid #F59E0B;
+        }
+
+        .confidence-low {
+            border-left: 4px solid #EF4444;
+        }
+
+        /* Melhorias no botão flutuante de voz */
+        .floating-voice-enhanced {
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .floating-voice-enhanced:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.4);
+        }
+
+        .floating-voice-enhanced.listening {
+            background: linear-gradient(135deg, #10B981, #059669) !important;
+            animation: voiceListening 1.5s infinite;
+        }
+
+        /* Estilos para o chat inteligente */
+        .chat-intelligence-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10B981;
+            animation: pulse 2s infinite;
+        }
+
+        /* Estilos para configurações de segurança */
+        .security-tab {
+            transition: all 0.3s ease;
+        }
+
+        .security-tab.active {
+            background: linear-gradient(135deg, #3B82F6, #1D4ED8) !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .security-tab:hover:not(.active) {
+            background: #E5E7EB !important;
+            transform: translateY(-1px);
+        }
+
+        .security-content {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .security-content.hidden {
+            display: none;
+        }
+
+        /* Toggle switches personalizados */
+        .peer:checked~.peer-checked\:bg-blue-600 {
+            background-color: #2563EB;
+        }
+
+        .peer:checked~.peer-checked\:bg-purple-600 {
+            background-color: #7C3AED;
+        }
+
+        /* Cards de status */
+        .security-status-card {
+            background: linear-gradient(135deg, #F0F9FF, #DBEAFE);
+            border: 1px solid #BFDBFE;
+        }
+
+        .security-high {
+            background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
+            border-color: #BBF7D0;
+        }
+
+        .security-medium {
+            background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+            border-color: #FDE68A;
+        }
+
+        .security-low {
+            background: linear-gradient(135deg, #FEF2F2, #FECACA);
+            border-color: #FCA5A5;
+        }
+
+        /* Animações para alertas */
+        .security-alert {
+            animation: securityPulse 2s infinite;
+        }
+
+        @keyframes securityPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+
+        /* Estilos para log de auditoria */
+        .audit-log-entry {
+            border-left: 4px solid #E5E7EB;
+            transition: all 0.3s ease;
+        }
+
+        .audit-log-entry:hover {
+            background: #F9FAFB;
+            border-left-color: #3B82F6;
+        }
+
+        .audit-log-entry.risk-high {
+            border-left-color: #EF4444;
+        }
+
+        .audit-log-entry.risk-medium {
+            border-left-color: #F59E0B;
+        }
+
+        .audit-log-entry.risk-low {
+            border-left-color: #10B981;
+        }
+
+        /* Estilos para contatos de emergência */
+        .emergency-contact-card {
+            border: 1px solid #E5E7EB;
+            transition: all 0.3s ease;
+        }
+
+        .emergency-contact-card:hover {
+            border-color: #EF4444;
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.1);
+        }
+
+        .priority-high {
+            border-left: 4px solid #EF4444;
+        }
+
+        .priority-normal {
+            border-left: 4px solid #F59E0B;
+        }
+
+        .priority-low {
+            border-left: 4px solid #10B981;
+        }
+    </style>
+
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
         .glass-effect {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -239,17 +564,188 @@
         </div>
     </div>
     <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 gradient-bg flex items-center justify-center z-50">
+    <div id="loading-screen" class="fixed inset-0 gradient-bg flex items-center justify-center z-55 hidden">
         <div class="text-center text-white">
-            <div class="w-20 h-20 mx-auto mb-6 border-4 border-white border-t-transparent rounded-full animate-spin">
+            <div class="w-24 h-24 mx-auto mb-8 relative">
+                <!-- Rotating outer ring -->
+                <div class="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin">
+                </div>
+                <!-- Pulsing inner circle -->
+                <div class="absolute inset-3 bg-white rounded-full animate-pulse opacity-50"></div>
+                <!-- Central logo -->
+                <div
+                    class="absolute inset-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                    <i data-lucide="brain" class="w-6 h-6 text-white"></i>
+                </div>
             </div>
-            <h1 class="text-4xl font-black mb-2 iaon-logo text-white">IAON</h1>
-            <h2 class="text-xl font-bold mb-2">Assistente IA Avançado</h2>
-            <p class="text-lg opacity-90">Inicializando sistemas inteligentes...</p>
-            <div class="mt-4 flex justify-center space-x-2">
-                <div class="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                <div class="w-2 h-2 bg-white rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                <div class="w-2 h-2 bg-white rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+
+            <h1 class="text-5xl font-black mb-4 iaon-logo text-white">IAON</h1>
+            <h2 class="text-2xl font-bold mb-4">Assistente IA Avançado</h2>
+            <p class="text-lg opacity-90 mb-6" id="loading-text">Inicializando sistemas inteligentes...</p>
+
+            <!-- Progress bar -->
+            <div class="w-80 mx-auto mb-6">
+                <div class="bg-white bg-opacity-20 rounded-full h-2">
+                    <div id="loading-progress" class="bg-white rounded-full h-2 transition-all duration-500"
+                        style="width: 0%"></div>
+                </div>
+                <p class="text-sm opacity-75 mt-2" id="loading-percentage">0%</p>
+            </div>
+
+            <!-- Loading steps -->
+            <div class="space-y-2 text-sm opacity-75">
+                <div id="step-auth" class="flex items-center justify-center">
+                    <i data-lucide="shield-check" class="w-4 h-4 mr-2"></i>
+                    <span>Verificando autenticação...</span>
+                </div>
+                <div id="step-ai" class="flex items-center justify-center hidden">
+                    <i data-lucide="brain" class="w-4 h-4 mr-2"></i>
+                    <span>Carregando IA avançada...</span>
+                </div>
+                <div id="step-voice" class="flex items-center justify-center hidden">
+                    <i data-lucide="mic" class="w-4 h-4 mr-2"></i>
+                    <span>Inicializando biometria de voz...</span>
+                </div>
+                <div id="step-systems" class="flex items-center justify-center hidden">
+                    <i data-lucide="settings" class="w-4 h-4 mr-2"></i>
+                    <span>Conectando sistemas...</span>
+                </div>
+                <div id="step-ready" class="flex items-center justify-center hidden">
+                    <i data-lucide="check-circle" class="w-4 h-4 mr-2"></i>
+                    <span>Sistema pronto!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 gradient-bg flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-black mb-2 iaon-logo">IAON</h1>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Assistente IA Avançado</h2>
+                <p class="text-gray-600">Entre na sua conta para continuar</p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="flex mb-6 bg-gray-100 rounded-lg overflow-hidden">
+                <button id="login-tab"
+                    class="flex-1 py-3 px-4 text-center font-medium bg-blue-500 text-white transition-all duration-300">
+                    Entrar
+                </button>
+                <button id="register-tab"
+                    class="flex-1 py-3 px-4 text-center font-medium text-gray-600 hover:bg-gray-200 transition-all duration-300">
+                    Registrar
+                </button>
+            </div>
+
+            <!-- Error/Success Messages -->
+            <div id="auth-error" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg"></div>
+            <div id="auth-success"
+                class="hidden mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg"></div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="login-email" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Digite seu email">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                    <input type="password" id="login-password" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Digite sua senha">
+                </div>
+
+                <button type="submit" id="login-btn"
+                    class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                    🔐 Entrar
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="space-y-6 hidden">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
+                    <input type="text" id="register-name" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Digite seu nome completo">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="register-email" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Digite seu email">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                    <input type="password" id="register-password" required minlength="8"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Digite sua senha (mín. 8 caracteres)">
+
+                    <!-- Password strength indicator -->
+                    <div id="password-strength" class="mt-2 hidden">
+                        <div class="flex space-x-1 mb-2">
+                            <div class="h-1 bg-gray-200 rounded flex-1" id="strength-bar-1"></div>
+                            <div class="h-1 bg-gray-200 rounded flex-1" id="strength-bar-2"></div>
+                            <div class="h-1 bg-gray-200 rounded flex-1" id="strength-bar-3"></div>
+                            <div class="h-1 bg-gray-200 rounded flex-1" id="strength-bar-4"></div>
+                        </div>
+                        <p class="text-xs" id="strength-text">Força da senha</p>
+                        <ul class="text-xs mt-2 space-y-1">
+                            <li id="req-length" class="flex items-center text-gray-500">
+                                <i data-lucide="x" class="w-3 h-3 mr-1"></i>
+                                <span>Pelo menos 8 caracteres</span>
+                            </li>
+                            <li id="req-upper" class="flex items-center text-gray-500">
+                                <i data-lucide="x" class="w-3 h-3 mr-1"></i>
+                                <span>Uma letra maiúscula</span>
+                            </li>
+                            <li id="req-lower" class="flex items-center text-gray-500">
+                                <i data-lucide="x" class="w-3 h-3 mr-1"></i>
+                                <span>Uma letra minúscula</span>
+                            </li>
+                            <li id="req-number" class="flex items-center text-gray-500">
+                                <i data-lucide="x" class="w-3 h-3 mr-1"></i>
+                                <span>Um número</span>
+                            </li>
+                            <li id="req-special" class="flex items-center text-gray-500">
+                                <i data-lucide="x" class="w-3 h-3 mr-1"></i>
+                                <span>Um caractere especial</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirmar Senha</label>
+                    <input type="password" id="register-confirm" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Confirme sua senha">
+                </div>
+
+                <button type="submit" id="register-btn"
+                    class="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                    🚀 Criar Conta
+                </button>
+            </form>
+
+
+
+            <!-- Security Features -->
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 class="font-semibold text-gray-800 mb-2">🔒 Segurança IAON</h4>
+                <ul class="text-xs text-gray-600 space-y-1">
+                    <li>• Criptografia end-to-end</li>
+                    <li>• Biometria de voz avançada</li>
+                    <li>• Monitoramento 24/7</li>
+                    <li>• Proteção contra sequestro</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -270,9 +766,11 @@
 
                     <div class="flex items-center space-x-4">
                         <!-- Voice Status -->
-                        <div id="voice-status" class="flex items-center space-x-2">
+                        <div id="voice-status" class="voice-status-advanced">
                             <div id="voice-indicator" class="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <span id="voice-text" class="text-sm text-gray-600">Voz Inativa</span>
+                            <span id="voice-text" class="text-sm text-gray-600 hidden sm:block">Voz Inativa</span>
+                            <div class="chat-intelligence-indicator" id="intelligence-indicator" style="display: none;">
+                            </div>
                         </div>
 
                         <!-- User Menu -->
@@ -339,6 +837,13 @@
                             </a>
                         </li>
                         <li>
+                            <a href="#" data-section="participants"
+                                class="nav-link flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50">
+                                <i data-lucide="user-plus" class="w-5 h-5"></i>
+                                <span>Participantes</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="#" data-section="voice-biometry"
                                 class="nav-link flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50">
                                 <i data-lucide="mic" class="w-5 h-5"></i>
@@ -373,16 +878,27 @@
                             <div class="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
                                 <h3 class="text-lg font-semibold flex items-center">
                                     <span class="iaon-logo text-xl mr-2">IAON</span>
-                                    Conversa Inteligente
+                                    Conversa Natural & Inteligente
                                 </h3>
-                                <p class="text-sm text-gray-600">Diga "IA" para ativar comandos de voz com biometria</p>
+                                <p class="text-sm text-gray-600">Fale naturalmente comigo! Ativo comando de voz para
+                                    conversar ou dar instruções</p>
                             </div>
 
                             <!-- Chat Messages -->
                             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4">
                                 <div class="ai-bubble chat-bubble p-3 rounded-lg text-white">
-                                    <p>🤖 Olá! Sou o <strong>IAON</strong>, seu assistente IA avançado com biometria de
-                                        voz. Como posso ajudá-lo hoje?</p>
+                                    <p>🤖 Olá! Sou o <strong>IAON</strong>, seu assistente IA avançado com capacidade de
+                                        conversa natural!</p>
+                                    <p class="mt-2 text-sm opacity-90">✨ <strong>Novidade:</strong> Agora posso
+                                        responder a qualquer coisa que você disser! Basta ativar o microfone e falar
+                                        naturalmente comigo.</p>
+                                    <p class="mt-2 text-sm opacity-90">🎤 <strong>Como usar:</strong></p>
+                                    <ul class="text-sm opacity-90 mt-1 ml-4">
+                                        <li>• Clique no microfone para ativar escuta contínua</li>
+                                        <li>• Fale naturalmente: "Oi IAON, como está?"</li>
+                                        <li>• Para comandos específicos: "IAON, abrir agenda"</li>
+                                        <li>• Posso conversar sobre qualquer assunto!</li>
+                                    </ul>
                                 </div>
                             </div>
 
@@ -647,6 +1163,67 @@
                     </div>
                 </section>
 
+                <section id="participants-section" class="section hidden p-6">
+                    <div class="max-w-6xl mx-auto">
+                        <h2 class="text-3xl font-bold mb-6 flex items-center">
+                            <i data-lucide="user-plus" class="w-8 h-8 mr-3 text-purple-500"></i>
+                            Participantes Conhecidos
+                        </h2>
+                        <p class="text-gray-600 mb-6">Gerencie participantes conhecidos para adicionar rapidamente às
+                            reuniões</p>
+
+                        <!-- Barra de busca e ações -->
+                        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                                <div class="flex-1">
+                                    <div class="relative">
+                                        <input type="text" id="participant-search" placeholder="Buscar participantes..."
+                                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                        <i data-lucide="search"
+                                            class="absolute left-3 top-2.5 w-4 h-4 text-gray-400"></i>
+                                    </div>
+                                </div>
+                                <button onclick="showAddParticipantModal()"
+                                    class="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    Novo Participante
+                                </button>
+                            </div>
+
+                            <!-- Filtros rápidos -->
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <button onclick="filterParticipants('all')"
+                                    class="filter-btn active bg-gray-100 px-3 py-1 rounded-full text-sm border-2 border-gray-300">
+                                    Todos
+                                </button>
+                                <button onclick="filterParticipants('frequent')"
+                                    class="filter-btn bg-green-100 px-3 py-1 rounded-full text-sm border-2 border-green-300">
+                                    Frequentes
+                                </button>
+                                <button onclick="filterParticipants('recent')"
+                                    class="filter-btn bg-blue-100 px-3 py-1 rounded-full text-sm border-2 border-blue-300">
+                                    Recentes
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de participantes -->
+                        <div class="bg-white rounded-lg shadow-lg">
+                            <div class="p-4 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold">Participantes Conhecidos</h3>
+                                <p class="text-sm text-gray-600" id="participants-count">Carregando...</p>
+                            </div>
+                            <div id="participants-list" class="divide-y divide-gray-200">
+                                <!-- Lista será preenchida dinamicamente -->
+                                <div class="p-8 text-center text-gray-500">
+                                    <i data-lucide="users" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                                    <p>Carregando participantes...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <section id="analytics-section" class="section hidden p-6">
                     <div class="max-w-6xl mx-auto">
                         <h2 class="text-3xl font-bold mb-6 flex items-center">
@@ -662,11 +1239,369 @@
                 <section id="settings-section" class="section hidden p-6">
                     <div class="max-w-6xl mx-auto">
                         <h2 class="text-3xl font-bold mb-6 flex items-center">
-                            <i data-lucide="settings" class="w-8 h-8 mr-3 text-gray-500"></i>
-                            Configurações
+                            <i data-lucide="shield-check" class="w-8 h-8 mr-3 text-blue-500"></i>
+                            Configurações de Segurança
                         </h2>
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <p class="text-gray-600 text-center">🚧 Configurações do sistema em desenvolvimento...</p>
+
+                        <!-- Navegação das configurações -->
+                        <div class="mb-6">
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="showSecurityTab('general')" id="tab-general"
+                                    class="security-tab active px-4 py-2 rounded-lg bg-blue-500 text-white">
+                                    🔐 Geral
+                                </button>
+                                <button onclick="showSecurityTab('authentication')" id="tab-authentication"
+                                    class="security-tab px-4 py-2 rounded-lg bg-gray-200 text-gray-700">
+                                    🔑 Autenticação
+                                </button>
+                                <button onclick="showSecurityTab('emergency')" id="tab-emergency"
+                                    class="security-tab px-4 py-2 rounded-lg bg-gray-200 text-gray-700">
+                                    🆘 Emergência
+                                </button>
+                                <button onclick="showSecurityTab('audit')" id="tab-audit"
+                                    class="security-tab px-4 py-2 rounded-lg bg-gray-200 text-gray-700">
+                                    📋 Auditoria
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Status de Segurança -->
+                        <div class="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6 mb-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">Status de Segurança</h3>
+                                    <p id="security-status" class="text-gray-600">Carregando status...</p>
+                                </div>
+                                <div id="security-score" class="text-right">
+                                    <div class="text-3xl font-bold text-blue-600">--</div>
+                                    <div class="text-sm text-gray-600">Pontuação</div>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div id="security-progress" class="bg-blue-600 h-2 rounded-full" style="width: 0%">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Geral -->
+                        <div id="security-tab-general" class="security-content">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Configurações Básicas -->
+                                <div class="bg-white rounded-lg shadow-lg p-6">
+                                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                                        <i data-lucide="settings" class="w-6 h-6 mr-2 text-gray-500"></i>
+                                        Configurações Básicas
+                                    </h3>
+
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Timeout de Sessão</label>
+                                                <p class="text-sm text-gray-500">Tempo limite para logout automático</p>
+                                            </div>
+                                            <select id="session-timeout"
+                                                class="px-3 py-2 border border-gray-300 rounded-lg">
+                                                <option value="1800">30 minutos</option>
+                                                <option value="3600">1 hora</option>
+                                                <option value="7200">2 horas</option>
+                                                <option value="86400">24 horas</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Alertas de Login</label>
+                                                <p class="text-sm text-gray-500">Notificar logins em novos dispositivos
+                                                </p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id="login-alerts" class="sr-only peer">
+                                                <div
+                                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Rastreamento de
+                                                    Dispositivos</label>
+                                                <p class="text-sm text-gray-500">Monitorar dispositivos usados</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id="device-tracking" class="sr-only peer">
+                                                <div
+                                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Log de Auditoria</label>
+                                                <p class="text-sm text-gray-500">Registrar todas as atividades</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id="audit-log" class="sr-only peer">
+                                                <div
+                                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <button onclick="saveSecuritySettings()"
+                                        class="w-full mt-6 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                        � Salvar Configurações
+                                    </button>
+                                </div>
+
+                                <!-- Configurações de Senha -->
+                                <div class="bg-white rounded-lg shadow-lg p-6">
+                                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                                        <i data-lucide="key" class="w-6 h-6 mr-2 text-yellow-500"></i>
+                                        Política de Senhas
+                                    </h3>
+
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Expiração da Senha</label>
+                                                <p class="text-sm text-gray-500">Forçar mudança periódica</p>
+                                            </div>
+                                            <select id="password-expiry"
+                                                class="px-3 py-2 border border-gray-300 rounded-lg">
+                                                <option value="30">30 dias</option>
+                                                <option value="60">60 dias</option>
+                                                <option value="90">90 dias</option>
+                                                <option value="180">180 dias</option>
+                                                <option value="365">1 ano</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Limite de Tentativas</label>
+                                                <p class="text-sm text-gray-500">Tentativas de login antes do bloqueio
+                                                </p>
+                                            </div>
+                                            <select id="failed-login-limit"
+                                                class="px-3 py-2 border border-gray-300 rounded-lg">
+                                                <option value="3">3 tentativas</option>
+                                                <option value="5">5 tentativas</option>
+                                                <option value="10">10 tentativas</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Duração do Bloqueio</label>
+                                                <p class="text-sm text-gray-500">Tempo de bloqueio após falhas</p>
+                                            </div>
+                                            <select id="lockout-duration"
+                                                class="px-3 py-2 border border-gray-300 rounded-lg">
+                                                <option value="300">5 minutos</option>
+                                                <option value="900">15 minutos</option>
+                                                <option value="1800">30 minutos</option>
+                                                <option value="3600">1 hora</option>
+                                            </select>
+                                        </div>
+
+                                        <button onclick="changePassword()"
+                                            class="w-full bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                                            🔄 Alterar Senha
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Autenticação -->
+                        <div id="security-tab-authentication" class="security-content hidden">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Autenticação de Dois Fatores -->
+                                <div class="bg-white rounded-lg shadow-lg p-6">
+                                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                                        <i data-lucide="smartphone" class="w-6 h-6 mr-2 text-green-500"></i>
+                                        Autenticação de Dois Fatores (2FA)
+                                    </h3>
+
+                                    <div id="2fa-status" class="mb-4">
+                                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                            <span class="font-medium">Status atual:</span>
+                                            <span id="2fa-current-status" class="text-red-600">❌ Desabilitado</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <button onclick="toggle2FA()" id="2fa-toggle-btn"
+                                            class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                            🔐 Habilitar 2FA
+                                        </button>
+
+                                        <div id="2fa-setup" class="hidden">
+                                            <h4 class="font-semibold mb-2">Configuração do 2FA:</h4>
+                                            <ol class="text-sm text-gray-600 space-y-1 mb-4">
+                                                <li>1. Instale um app como Google Authenticator</li>
+                                                <li>2. Escaneie o QR code abaixo</li>
+                                                <li>3. Digite o código gerado para confirmar</li>
+                                            </ol>
+
+                                            <div id="qr-code-container" class="text-center mb-4">
+                                                <!-- QR code será inserido aqui -->
+                                            </div>
+
+                                            <input type="text" id="2fa-verification-code"
+                                                placeholder="Digite o código de 6 dígitos"
+                                                class="w-full p-3 border border-gray-300 rounded-lg mb-4">
+
+                                            <button onclick="verify2FA()"
+                                                class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                                ✅ Verificar e Ativar
+                                            </button>
+                                        </div>
+
+                                        <div id="backup-codes" class="hidden">
+                                            <h4 class="font-semibold mb-2">Códigos de Backup:</h4>
+                                            <p class="text-sm text-gray-600 mb-2">Guarde estes códigos em local seguro:
+                                            </p>
+                                            <div id="backup-codes-list"
+                                                class="bg-gray-50 p-3 rounded-lg text-sm font-mono">
+                                                <!-- Códigos serão inseridos aqui -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Biometria de Voz -->
+                                <div class="bg-white rounded-lg shadow-lg p-6">
+                                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                                        <i data-lucide="mic" class="w-6 h-6 mr-2 text-purple-500"></i>
+                                        Biometria de Voz
+                                    </h3>
+
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="font-medium text-gray-700">Exigir Biometria</label>
+                                                <p class="text-sm text-gray-500">Para comandos sensíveis</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id="voice-biometry-required"
+                                                    class="sr-only peer">
+                                                <div
+                                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600">
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <button onclick="goToVoiceBiometry()"
+                                            class="w-full bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                                            🎤 Configurar Biometria de Voz
+                                        </button>
+
+                                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                            <div class="flex items-center mb-2">
+                                                <i data-lucide="info" class="w-4 h-4 text-purple-600 mr-2"></i>
+                                                <span class="font-semibold text-purple-800">Recursos da Biometria</span>
+                                            </div>
+                                            <ul class="text-purple-700 text-sm space-y-1">
+                                                <li>• Identificação única por voz</li>
+                                                <li>• Proteção contra imitação</li>
+                                                <li>• Comandos ultra-seguros</li>
+                                                <li>• Análise em tempo real</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Emergência -->
+                        <div id="security-tab-emergency" class="security-content hidden">
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                                    <i data-lucide="alert-triangle" class="w-6 h-6 mr-2 text-red-500"></i>
+                                    Contatos de Emergência
+                                </h3>
+
+                                <div class="mb-6">
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                        <p class="text-red-800 text-sm">
+                                            ⚠️ Estes contatos serão notificados automaticamente em situações de
+                                            emergência detectadas pelo sistema.
+                                        </p>
+                                    </div>
+
+                                    <button onclick="addEmergencyContact()"
+                                        class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors mb-4">
+                                        ➕ Adicionar Contato
+                                    </button>
+
+                                    <div id="emergency-contacts-list" class="space-y-3">
+                                        <!-- Contatos serão inseridos aqui -->
+                                    </div>
+                                </div>
+
+                                <!-- Modal para adicionar contato -->
+                                <div id="emergency-contact-modal" class="hidden">
+                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                        <h4 class="font-semibold mb-4">Adicionar Contato de Emergência</h4>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <input type="text" id="emergency-name" placeholder="Nome completo"
+                                                class="p-3 border border-gray-300 rounded-lg">
+                                            <input type="tel" id="emergency-phone" placeholder="Telefone"
+                                                class="p-3 border border-gray-300 rounded-lg">
+                                            <input type="email" id="emergency-email" placeholder="Email (opcional)"
+                                                class="p-3 border border-gray-300 rounded-lg">
+                                            <select id="emergency-relationship"
+                                                class="p-3 border border-gray-300 rounded-lg">
+                                                <option value="">Relacionamento</option>
+                                                <option value="familia">Família</option>
+                                                <option value="amigo">Amigo</option>
+                                                <option value="medico">Médico</option>
+                                                <option value="advogado">Advogado</option>
+                                                <option value="outro">Outro</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="flex space-x-2 mt-4">
+                                            <button onclick="saveEmergencyContact()"
+                                                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                                💾 Salvar
+                                            </button>
+                                            <button onclick="cancelEmergencyContact()"
+                                                class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                                                ❌ Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Auditoria -->
+                        <div id="security-tab-audit" class="security-content hidden">
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                                    <i data-lucide="file-text" class="w-6 h-6 mr-2 text-indigo-500"></i>
+                                    Log de Auditoria de Segurança
+                                </h3>
+
+                                <div class="mb-4">
+                                    <button onclick="refreshAuditLog()"
+                                        class="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors">
+                                        🔄 Atualizar Log
+                                    </button>
+                                </div>
+
+                                <div id="audit-log-container" class="space-y-3 max-h-96 overflow-y-auto">
+                                    <!-- Log entries serão inseridos aqui -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -676,7 +1611,8 @@
 
     <!-- Floating Voice Button -->
     <button id="floating-voice"
-        class="floating-action w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center voice-animation">
+        class="floating-action floating-voice-enhanced w-16 h-16 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center"
+        title="Clique para ativar/desativar escuta contínua do IAON">
         <i data-lucide="mic" class="w-8 h-8"></i>
     </button>
 
@@ -687,15 +1623,850 @@
         // Initialize Lucide icons
         lucide.createIcons();
 
+        // Auth system
+        function switchAuthTab(tab) {
+            const loginTab = document.getElementById('login-tab');
+            const registerTab = document.getElementById('register-tab');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+
+            if (tab === 'login') {
+                loginTab.classList.add('bg-blue-500', 'text-white');
+                loginTab.classList.remove('text-gray-600', 'hover:bg-gray-200');
+                registerTab.classList.remove('bg-blue-500', 'text-white');
+                registerTab.classList.add('text-gray-600', 'hover:bg-gray-200');
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+            } else {
+                registerTab.classList.add('bg-green-500', 'text-white');
+                registerTab.classList.remove('text-gray-600', 'hover:bg-gray-200');
+                loginTab.classList.remove('bg-blue-500', 'text-white');
+                loginTab.classList.add('text-gray-600', 'hover:bg-gray-200');
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+            clearAuthMessages();
+        }
+
+        function showAuthError(message) {
+            const errorEl = document.getElementById('auth-error');
+            const successEl = document.getElementById('auth-success');
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+            successEl.classList.add('hidden');
+        }
+
+        function showAuthSuccess(message) {
+            const successEl = document.getElementById('auth-success');
+            const errorEl = document.getElementById('auth-error');
+            successEl.textContent = message;
+            successEl.classList.remove('hidden');
+            errorEl.classList.add('hidden');
+        }
+
+        function clearAuthMessages() {
+            document.getElementById('auth-error').classList.add('hidden');
+            document.getElementById('auth-success').classList.add('hidden');
+        }
+
+        // Event listeners for auth tabs
+        document.getElementById('login-tab').addEventListener('click', () => switchAuthTab('login'));
+        document.getElementById('register-tab').addEventListener('click', () => switchAuthTab('register'));
+
+        // Password strength validation
+        document.getElementById('register-password').addEventListener('input', function (e) {
+            const password = e.target.value;
+            const strengthDiv = document.getElementById('password-strength');
+
+            if (password.length > 0) {
+                strengthDiv.classList.remove('hidden');
+
+                const requirements = {
+                    length: password.length >= 8,
+                    upper: /[A-Z]/.test(password),
+                    lower: /[a-z]/.test(password),
+                    number: /\d/.test(password),
+                    special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+                };
+
+                // Update requirement indicators
+                Object.keys(requirements).forEach(req => {
+                    const element = document.getElementById(`req-${req}`);
+                    const icon = element.querySelector('i');
+
+                    if (requirements[req]) {
+                        element.classList.remove('text-gray-500');
+                        element.classList.add('text-green-600');
+                        icon.setAttribute('data-lucide', 'check');
+                    } else {
+                        element.classList.remove('text-green-600');
+                        element.classList.add('text-gray-500');
+                        icon.setAttribute('data-lucide', 'x');
+                    }
+                });
+
+                // Update strength bars
+                const score = Object.values(requirements).filter(Boolean).length;
+                const strengthBars = ['strength-bar-1', 'strength-bar-2', 'strength-bar-3', 'strength-bar-4'];
+                const strengthText = document.getElementById('strength-text');
+
+                strengthBars.forEach((bar, index) => {
+                    const element = document.getElementById(bar);
+                    element.className = 'h-1 rounded flex-1';
+
+                    if (index < score) {
+                        if (score <= 2) {
+                            element.classList.add('bg-red-400');
+                        } else if (score <= 3) {
+                            element.classList.add('bg-yellow-400');
+                        } else if (score <= 4) {
+                            element.classList.add('bg-blue-400');
+                        } else {
+                            element.classList.add('bg-green-400');
+                        }
+                    } else {
+                        element.classList.add('bg-gray-200');
+                    }
+                });
+
+                // Update strength text
+                const strengthLabels = ['Muito fraca', 'Fraca', 'Razoável', 'Boa', 'Muito forte'];
+                strengthText.textContent = `Força da senha: ${strengthLabels[score] || 'Muito fraca'}`;
+                strengthText.className = `text-xs ${score <= 2 ? 'text-red-600' : score <= 3 ? 'text-yellow-600' : score <= 4 ? 'text-blue-600' : 'text-green-600'}`;
+
+                // Recreate icons
+                lucide.createIcons();
+            } else {
+                strengthDiv.classList.add('hidden');
+            }
+        });
+
+        // Advanced loading system
+        function startAdvancedLoading() {
+            const loadingSteps = [
+                { id: 'step-auth', text: 'Verificando autenticação...', duration: 1000 },
+                { id: 'step-ai', text: 'Carregando IA avançada...', duration: 1500 },
+                { id: 'step-voice', text: 'Inicializando biometria de voz...', duration: 1200 },
+                { id: 'step-systems', text: 'Conectando sistemas...', duration: 800 },
+                { id: 'step-ready', text: 'Sistema pronto!', duration: 500 }
+            ];
+
+            let currentStep = 0;
+            let totalProgress = 0;
+            const progressIncrement = 100 / loadingSteps.length;
+
+            function executeStep() {
+                if (currentStep > 0) {
+                    document.getElementById(loadingSteps[currentStep - 1].id).classList.add('hidden');
+                }
+
+                if (currentStep < loadingSteps.length) {
+                    const step = loadingSteps[currentStep];
+                    document.getElementById(step.id).classList.remove('hidden');
+
+                    totalProgress += progressIncrement;
+                    document.getElementById('loading-progress').style.width = totalProgress + '%';
+                    document.getElementById('loading-percentage').textContent = Math.round(totalProgress) + '%';
+
+                    currentStep++;
+                    setTimeout(executeStep, step.duration);
+                } else {
+                    // Loading complete
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').classList.add('hidden');
+                        document.getElementById('main-app').classList.remove('hidden');
+
+                        // Initialize advanced features
+                        if (window.iaon) {
+                            iaon.initializeAdvancedSystems();
+                            iaon.showOnboarding();
+                        }
+                    }, 1000);
+                }
+            }
+
+            executeStep();
+        }
+
+        // Login form
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const loginBtn = document.getElementById('login-btn');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '🔄 Entrando...';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAuthSuccess('✅ Login realizado com sucesso! Inicializando sistemas...');
+                    setTimeout(() => {
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('loading-screen').classList.remove('hidden');
+                        startAdvancedLoading();
+                    }, 1500);
+                } else {
+                    showAuthError(data.message || 'Erro no login');
+                }
+            } catch (error) {
+                showAuthError('Erro de conexão. Tente novamente.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '🔐 Entrar';
+            }
+        });
+
+        // Register form
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-confirm').value;
+            const registerBtn = document.getElementById('register-btn');
+
+            if (password !== confirm) {
+                showAuthError('As senhas não coincidem');
+                return;
+            }
+
+            if (password.length < 8) {
+                showAuthError('Senha deve ter pelo menos 8 caracteres');
+                return;
+            }
+
+            // Validação avançada de senha
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+            if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+                showAuthError('Senha deve conter pelo menos: 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial');
+                return;
+            }
+
+            registerBtn.disabled = true;
+            registerBtn.textContent = '🔄 Criando conta...';
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAuthSuccess('✅ Conta criada com sucesso! Inicializando sistemas...');
+                    setTimeout(() => {
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('loading-screen').classList.remove('hidden');
+                        startAdvancedLoading();
+                    }, 1500);
+                } else {
+                    showAuthError(data.message || 'Erro no registro');
+                }
+            } catch (error) {
+                showAuthError('Erro de conexão. Tente novamente.');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = '🚀 Criar Conta';
+            }
+        });
+
+        // Sistema de Configurações de Segurança
+        const SecurityManager = {
+            currentTab: 'general',
+            settings: {},
+
+            init() {
+                this.loadSecuritySettings();
+                this.attachEventListeners();
+                this.updateSecurityStatus();
+            },
+
+            // Alterna entre abas de segurança
+            switchTab(tabName) {
+                // Remove classe ativa de todas as abas
+                document.querySelectorAll('.security-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+
+                // Oculta todo o conteúdo
+                document.querySelectorAll('.security-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                // Ativa a aba atual
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+                document.getElementById(`content-${tabName}`).classList.remove('hidden');
+
+                this.currentTab = tabName;
+            },
+
+            // Carrega configurações de segurança do servidor
+            async loadSecuritySettings() {
+                try {
+                    const response = await fetch('/api/security/settings');
+                    if (response.ok) {
+                        this.settings = await response.json();
+                        this.updateUI();
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar configurações de segurança:', error);
+                    this.showAlert('Erro ao carregar configurações de segurança', 'error');
+                }
+            },
+
+            // Salva configurações de segurança
+            async saveSecuritySettings() {
+                try {
+                    const response = await fetch('/api/security/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(this.settings)
+                    });
+
+                    if (response.ok) {
+                        this.showAlert('Configurações de segurança salvas com sucesso!', 'success');
+                        this.updateSecurityStatus();
+                    } else {
+                        throw new Error('Falha ao salvar configurações');
+                    }
+                } catch (error) {
+                    console.error('Erro ao salvar configurações:', error);
+                    this.showAlert('Erro ao salvar configurações de segurança', 'error');
+                }
+            },
+
+            // Atualiza interface com configurações atuais
+            updateUI() {
+                // Verifica se os elementos existem antes de atualizar
+                const twoFactorToggle = document.getElementById('twoFactorEnabled');
+                if (twoFactorToggle) twoFactorToggle.checked = this.settings.twoFactorEnabled || false;
+
+                const biometricToggle = document.getElementById('biometricEnabled');
+                if (biometricToggle) biometricToggle.checked = this.settings.biometricEnabled || false;
+
+                const sessionTimeout = document.getElementById('sessionTimeout');
+                if (sessionTimeout) sessionTimeout.value = this.settings.sessionTimeout || 30;
+
+                const alertsToggle = document.getElementById('alertsEnabled');
+                if (alertsToggle) alertsToggle.checked = this.settings.alertsEnabled !== false;
+
+                const auditToggle = document.getElementById('auditLogging');
+                if (auditToggle) auditToggle.checked = this.settings.auditLogging !== false;
+
+                // Atualiza outras configurações
+                this.updateAuthSettings();
+                this.loadEmergencyContacts();
+                this.loadAuditLog();
+            },
+
+            // Configurações de autenticação
+            updateAuthSettings() {
+                const authMethod = this.settings.authMethod || 'password';
+                const authRadio = document.getElementById(`auth-${authMethod}`);
+                if (authRadio) authRadio.checked = true;
+            },
+
+            // Gerencia contatos de emergência
+            async addEmergencyContact() {
+                const name = document.getElementById('emergencyContactName').value;
+                const phone = document.getElementById('emergencyContactPhone').value;
+                const email = document.getElementById('emergencyContactEmail').value;
+                const priority = document.getElementById('emergencyContactPriority').value;
+
+                if (!name || !phone) {
+                    this.showAlert('Nome e telefone são obrigatórios', 'error');
+                    return;
+                }
+
+                const contact = { name, phone, email, priority };
+
+                try {
+                    const response = await fetch('/api/security/emergency-contacts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(contact)
+                    });
+
+                    if (response.ok) {
+                        this.showAlert('Contato de emergência adicionado!', 'success');
+                        this.clearEmergencyForm();
+                        this.loadEmergencyContacts();
+                    }
+                } catch (error) {
+                    console.error('Erro ao adicionar contato:', error);
+                    this.showAlert('Erro ao adicionar contato de emergência', 'error');
+                }
+            },
+
+            // Carrega contatos de emergência
+            async loadEmergencyContacts() {
+                try {
+                    const response = await fetch('/api/security/emergency-contacts');
+                    if (response.ok) {
+                        const contacts = await response.json();
+                        this.displayEmergencyContacts(contacts);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar contatos:', error);
+                }
+            },
+
+            // Exibe contatos de emergência
+            displayEmergencyContacts(contacts) {
+                const container = document.getElementById('emergencyContactsList');
+                if (!container) return;
+
+                container.innerHTML = '';
+
+                contacts.forEach(contact => {
+                    const contactDiv = document.createElement('div');
+                    contactDiv.className = `emergency-contact-card p-4 rounded-lg mb-3 priority-${contact.priority}`;
+
+                    contactDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${contact.name}</h4>
+                                <p class="text-sm text-gray-600">📞 ${contact.phone}</p>
+                                ${contact.email ? `<p class="text-sm text-gray-600">📧 ${contact.email}</p>` : ''}
+                                <span class="inline-block px-2 py-1 text-xs rounded-full mt-2 ${this.getPriorityClass(contact.priority)}">
+                                    ${this.getPriorityLabel(contact.priority)}
+                                </span>
+                            </div>
+                            <button onclick="SecurityManager.removeEmergencyContact(${contact.id})" 
+                                    class="text-red-500 hover:text-red-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+
+                    container.appendChild(contactDiv);
+                });
+            },
+
+            // Remove contato de emergência
+            async removeEmergencyContact(contactId) {
+                if (!confirm('Deseja realmente remover este contato de emergência?')) return;
+
+                try {
+                    const response = await fetch(`/api/security/emergency-contacts/${contactId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        this.showAlert('Contato removido com sucesso!', 'success');
+                        this.loadEmergencyContacts();
+                    }
+                } catch (error) {
+                    console.error('Erro ao remover contato:', error);
+                    this.showAlert('Erro ao remover contato', 'error');
+                }
+            },
+
+            // Carrega log de auditoria
+            async loadAuditLog() {
+                try {
+                    const response = await fetch('/api/security/audit-log');
+                    if (response.ok) {
+                        const logs = await response.json();
+                        this.displayAuditLog(logs);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar log de auditoria:', error);
+                }
+            },
+
+            // Exibe log de auditoria
+            displayAuditLog(logs) {
+                const container = document.getElementById('auditLogContainer');
+                if (!container) return;
+
+                container.innerHTML = '';
+
+                logs.forEach(log => {
+                    const logDiv = document.createElement('div');
+                    logDiv.className = `audit-log-entry p-4 mb-3 rounded-lg risk-${log.risk}`;
+
+                    logDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${log.action}</h4>
+                                <p class="text-sm text-gray-600 mt-1">${log.description}</p>
+                                <div class="flex space-x-4 mt-2 text-xs text-gray-500">
+                                    <span>📅 ${this.formatDate(log.timestamp)}</span>
+                                    <span>🌍 ${log.ip_address}</span>
+                                    <span>💻 ${log.user_agent}</span>
+                                </div>
+                            </div>
+                            <span class="inline-block px-2 py-1 text-xs rounded-full ${this.getRiskClass(log.risk)}">
+                                ${this.getRiskLabel(log.risk)}
+                            </span>
+                        </div>
+                    `;
+
+                    container.appendChild(logDiv);
+                });
+            },
+
+            // Configura 2FA
+            async enable2FA() {
+                try {
+                    const response = await fetch('/api/security/two-factor/enable', {
+                        method: 'POST'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.show2FASetup(data.qr_code, data.secret);
+                    }
+                } catch (error) {
+                    console.error('Erro ao configurar 2FA:', error);
+                    this.showAlert('Erro ao configurar autenticação de dois fatores', 'error');
+                }
+            },
+
+            // Exibe configuração de 2FA
+            show2FASetup(qrCode, secret) {
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                        <h3 class="text-lg font-semibold mb-4">Configurar Autenticação de Dois Fatores</h3>
+                        <div class="text-center mb-4">
+                            <img src="${qrCode}" alt="QR Code" class="mx-auto mb-2">
+                            <p class="text-sm text-gray-600">Escaneie o QR Code com seu app autenticador</p>
+                            <p class="text-xs text-gray-500 mt-2">Código manual: ${secret}</p>
+                        </div>
+                        <input type="text" id="verify2FA" placeholder="Digite o código de 6 dígitos" 
+                               class="w-full p-2 border rounded mb-4">
+                        <div class="flex space-x-2">
+                            <button onclick="SecurityManager.verify2FA()" 
+                                    class="flex-1 bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+                                Verificar
+                            </button>
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                    class="flex-1 bg-gray-500 text-white p-2 rounded hover:bg-gray-600">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            },
+
+            // Verifica código 2FA
+            async verify2FA() {
+                const code = document.getElementById('verify2FA').value;
+                if (!code || code.length !== 6) {
+                    this.showAlert('Digite um código de 6 dígitos', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/security/two-factor/verify', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ code })
+                    });
+
+                    if (response.ok) {
+                        this.showAlert('Autenticação de dois fatores configurada com sucesso!', 'success');
+                        document.querySelector('.fixed.inset-0').remove();
+                        this.loadSecuritySettings();
+                    } else {
+                        this.showAlert('Código inválido. Tente novamente.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar 2FA:', error);
+                    this.showAlert('Erro ao verificar código', 'error');
+                }
+            },
+
+            // Atualiza status de segurança geral
+            updateSecurityStatus() {
+                const score = this.calculateSecurityScore();
+                const statusElement = document.getElementById('securityStatus');
+                const scoreElement = document.getElementById('securityScore');
+
+                if (statusElement && scoreElement) {
+                    scoreElement.textContent = `${score}%`;
+
+                    if (score >= 80) {
+                        statusElement.className = 'security-status-card security-high p-4 rounded-lg';
+                        statusElement.innerHTML = '🛡️ <strong>Segurança Alta</strong> - Suas configurações estão otimizadas';
+                    } else if (score >= 60) {
+                        statusElement.className = 'security-status-card security-medium p-4 rounded-lg';
+                        statusElement.innerHTML = '⚠️ <strong>Segurança Média</strong> - Considere melhorar algumas configurações';
+                    } else {
+                        statusElement.className = 'security-status-card security-low p-4 rounded-lg security-alert';
+                        statusElement.innerHTML = '🚨 <strong>Segurança Baixa</strong> - Configurações necessitam atenção urgente';
+                    }
+                }
+            },
+
+            // Calcula pontuação de segurança
+            calculateSecurityScore() {
+                let score = 0;
+
+                if (this.settings.twoFactorEnabled) score += 30;
+                if (this.settings.biometricEnabled) score += 20;
+                if (this.settings.auditLogging) score += 15;
+                if (this.settings.alertsEnabled) score += 10;
+                if (this.settings.sessionTimeout && this.settings.sessionTimeout <= 30) score += 15;
+                if (this.settings.strongPassword) score += 10;
+
+                return Math.min(score, 100);
+            },
+
+            // Funções utilitárias
+            clearEmergencyForm() {
+                const elements = ['emergencyContactName', 'emergencyContactPhone', 'emergencyContactEmail'];
+                elements.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) element.value = '';
+                });
+
+                const priority = document.getElementById('emergencyContactPriority');
+                if (priority) priority.value = 'normal';
+            },
+
+            getPriorityClass(priority) {
+                const classes = {
+                    high: 'bg-red-100 text-red-800',
+                    normal: 'bg-yellow-100 text-yellow-800',
+                    low: 'bg-green-100 text-green-800'
+                };
+                return classes[priority] || classes.normal;
+            },
+
+            getPriorityLabel(priority) {
+                const labels = {
+                    high: 'Alta Prioridade',
+                    normal: 'Prioridade Normal',
+                    low: 'Baixa Prioridade'
+                };
+                return labels[priority] || labels.normal;
+            },
+
+            getRiskClass(risk) {
+                const classes = {
+                    high: 'bg-red-100 text-red-800',
+                    medium: 'bg-yellow-100 text-yellow-800',
+                    low: 'bg-green-100 text-green-800'
+                };
+                return classes[risk] || classes.low;
+            },
+
+            getRiskLabel(risk) {
+                const labels = {
+                    high: 'Alto Risco',
+                    medium: 'Risco Médio',
+                    low: 'Baixo Risco'
+                };
+                return labels[risk] || labels.low;
+            },
+
+            formatDate(timestamp) {
+                return new Date(timestamp).toLocaleString('pt-BR');
+            },
+
+            // Anexa event listeners
+            attachEventListeners() {
+                // Listener para mudanças nas configurações
+                document.addEventListener('change', (e) => {
+                    if (e.target.matches('#securitySettingsForm input, #securitySettingsForm select')) {
+                        this.updateSettingsFromForm();
+                    }
+                });
+
+                // Auto-save após mudanças
+                document.addEventListener('change', (e) => {
+                    if (e.target.matches('#securitySettingsForm input[type="checkbox"], #securitySettingsForm select')) {
+                        setTimeout(() => this.saveSecuritySettings(), 500);
+                    }
+                });
+            },
+
+            // Atualiza configurações a partir do formulário
+            updateSettingsFromForm() {
+                const twoFactorToggle = document.getElementById('twoFactorEnabled');
+                if (twoFactorToggle) this.settings.twoFactorEnabled = twoFactorToggle.checked;
+
+                const biometricToggle = document.getElementById('biometricEnabled');
+                if (biometricToggle) this.settings.biometricEnabled = biometricToggle.checked;
+
+                const sessionTimeout = document.getElementById('sessionTimeout');
+                if (sessionTimeout) this.settings.sessionTimeout = parseInt(sessionTimeout.value);
+
+                const alertsToggle = document.getElementById('alertsEnabled');
+                if (alertsToggle) this.settings.alertsEnabled = alertsToggle.checked;
+
+                const auditToggle = document.getElementById('auditLogging');
+                if (auditToggle) this.settings.auditLogging = auditToggle.checked;
+
+                // Método de autenticação
+                const authRadios = document.querySelectorAll('input[name="authMethod"]:checked');
+                if (authRadios.length > 0) {
+                    this.settings.authMethod = authRadios[0].value;
+                }
+            },
+
+            // Exibe alertas
+            showAlert(message, type = 'info') {
+                const alertDiv = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+
+                alertDiv.className = `fixed top-4 right-4 ${bgColor} text-white p-4 rounded-lg shadow-lg z-50 max-w-sm`;
+                alertDiv.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span>${message}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white hover:text-gray-200">
+                            ✕
+                        </button>
+                    </div>
+                `;
+
+                document.body.appendChild(alertDiv);
+
+                // Remove automaticamente após 5 segundos
+                setTimeout(() => {
+                    if (alertDiv.parentElement) {
+                        alertDiv.remove();
+                    }
+                }, 5000);
+            }
+        };
+
         // Initialize app when DOM is loaded
         document.addEventListener('DOMContentLoaded', function () {
-            // Hide loading screen after 3 seconds
+            // Initialize Security Manager
             setTimeout(() => {
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-            }, 3000);
+                if (typeof SecurityManager !== 'undefined') {
+                    SecurityManager.init();
+                }
+            }, 500);
+
+            // Check if user is already authenticated
+            fetch('/api/auth/check')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        // User is already logged in, go directly to app with advanced loading
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('loading-screen').classList.remove('hidden');
+                        startAdvancedLoading();
+                    }
+                })
+                .catch(() => {
+                    // User not authenticated, stay on login screen
+                });
         });
     </script>
+
+    <!-- Modal para Adicionar/Editar Participante -->
+    <div id="participant-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-lg font-semibold">Novo Participante</h3>
+                <button onclick="closeParticipantModal()" class="text-gray-500 hover:text-gray-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="participant-form" onsubmit="saveParticipant(event)">
+                <input type="hidden" id="edit-participant-id">
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                        <input type="text" id="participant-name" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="participant-email"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                        <input type="tel" id="participant-phone"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                        <input type="text" id="participant-company"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                        <input type="text" id="participant-position"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Papel Padrão</label>
+                        <select id="participant-role"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                            <option value="participante">Participante</option>
+                            <option value="moderador">Moderador</option>
+                            <option value="apresentador">Apresentador</option>
+                            <option value="convidado">Convidado</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                        <textarea id="participant-notes" rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeParticipantModal()"
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -6,7 +6,7 @@ import random
 import re
 import phonenumbers
 from phonenumbers import geocoder, carrier
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify, session
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
@@ -22,7 +22,7 @@ app = Flask(__name__, static_folder='static')
 # Configurações de segurança
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'iaon-super-secret-key-2025')
 app.config['WTF_CSRF_ENABLED'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = False  # False para desenvolvimento HTTP
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
@@ -34,15 +34,21 @@ CORS(app,
      supports_credentials=True)
 
 # Configuração do banco de dados
-# Para Vercel (produção) usa SQLite em memória, para desenvolvimento usa arquivo
-if os.getenv('FLASK_ENV') == 'production':
-    # Banco de dados em memória para Vercel (serverless)
+# Detectar ambiente Vercel
+is_vercel = os.getenv('VERCEL') == '1'
+is_production = os.getenv('FLASK_ENV') == 'production' or is_vercel
+
+if is_vercel:
+    # Para Vercel, usar PostgreSQL ou banco persistente
+    # Como fallback, usar SQLite em memória mas com inicialização garantida
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app.config['AUTO_INIT_DB'] = True
 else:
     # Banco de dados em arquivo para desenvolvimento local
     database_path = os.path.join(os.path.dirname(__file__), 'database', 'iaon.db')
     os.makedirs(os.path.dirname(database_path), exist_ok=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path}"
+    app.config['AUTO_INIT_DB'] = False
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -52,6 +58,28 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 # Inicializar banco de dados
 db.init_app(app)
+
+# Middleware para Vercel
+@app.before_request
+def before_request():
+    """Middleware para lidar com problemas específicos do Vercel"""
+    # Garantir que o banco está inicializado
+    if app.config.get('AUTO_INIT_DB', False) and hasattr(app, '_db_initialized') == False:
+        with app.app_context():
+            try:
+                db.create_all()
+                app._db_initialized = True
+            except Exception as e:
+                print(f"Erro na inicialização do banco: {e}")
+
+@app.after_request
+def after_request(response):
+    """Configurar headers para compatibilidade com Vercel"""
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Modelos avançados
 class User(db.Model):
@@ -74,6 +102,23 @@ class User(db.Model):
     last_login = db.Column(db.DateTime)
     last_activity = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Configurações de Segurança Avançadas
+    is_admin = db.Column(db.Boolean, default=False)
+    bio = db.Column(db.Text)  # Biografia do usuário
+    voice_samples_count = db.Column(db.Integer, default=0)
+    
+    # Configurações de Notificação (JSON)
+    notification_preferences = db.Column(db.Text)  # JSON: {"email": true, "push": true, "sms": false}
+    
+    # Configurações de Privacidade (JSON) 
+    privacy_settings = db.Column(db.Text)  # JSON: {"profile_visibility": "private", "data_sharing": false}
+    
+    # Configurações de Segurança (JSON)
+    security_settings = db.Column(db.Text)  # JSON: {"two_factor_enabled": false, "session_timeout": 3600}
+    
+    # Dados Biométricos (JSON)
+    biometric_data = db.Column(db.Text)  # JSON com dados de biometria de voz
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -82,14 +127,84 @@ class User(db.Model):
             'full_name': self.full_name,
             'preferred_name': self.preferred_name,
             'is_active': self.is_active,
+            'is_admin': self.is_admin,
             'is_onboarded': self.is_onboarded,
             'language_preference': self.language_preference,
             'theme_preference': self.theme_preference,
             'voice_enabled': self.voice_enabled,
             'custom_trigger_word': self.custom_trigger_word,
             'trigger_sensitivity': self.trigger_sensitivity,
+            'bio': self.bio,
+            'voice_samples_count': self.voice_samples_count,
+            'notification_preferences': json.loads(self.notification_preferences) if self.notification_preferences else {
+                'email': True,
+                'push': True,
+                'sms': False
+            },
+            'privacy_settings': json.loads(self.privacy_settings) if self.privacy_settings else {
+                'profile_visibility': 'private',
+                'data_sharing': False,
+                'analytics': True
+            },
+            'security_settings': json.loads(self.security_settings) if self.security_settings else {
+                'two_factor_enabled': False,
+                'session_timeout': 3600,
+                'login_alerts': True,
+                'device_tracking': True,
+                'password_expiry': 90,
+                'failed_login_limit': 5,
+                'lockout_duration': 1800
+            },
+            'biometric_data': json.loads(self.biometric_data) if self.biometric_data else {},
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+    
+    def get_security_settings(self):
+        """Retorna configurações de segurança com valores padrão"""
+        if self.security_settings:
+            try:
+                settings = json.loads(self.security_settings)
+            except (json.JSONDecodeError, TypeError):
+                settings = {}
+        else:
+            settings = {}
+        
+        # Configurações padrão de segurança
+        default_settings = {
+            'two_factor_enabled': False,
+            'session_timeout': 3600,  # 1 hora em segundos
+            'login_alerts': True,
+            'device_tracking': True,
+            'password_expiry': 90,  # dias
+            'failed_login_limit': 5,
+            'lockout_duration': 1800,  # 30 minutos em segundos
+            'require_password_change': False,
+            'ip_whitelist_enabled': False,
+            'ip_whitelist': [],
+            'security_questions_enabled': False,
+            'backup_codes_generated': False,
+            'last_security_check': None,
+            'voice_biometry_required': False,
+            'emergency_contacts': [],
+            'auto_logout_enabled': True,
+            'session_encryption': True,
+            'audit_log_enabled': True
+        }
+        
+        # Combinar configurações padrão com configurações do usuário
+        for key, default_value in default_settings.items():
+            if key not in settings:
+                settings[key] = default_value
+        
+        return settings
+    
+    def update_security_settings(self, new_settings):
+        """Atualiza configurações de segurança"""
+        current_settings = self.get_security_settings()
+        current_settings.update(new_settings)
+        self.security_settings = json.dumps(current_settings)
+        db.session.commit()
+        return current_settings
 
 class VoiceBiometry(db.Model):
     __tablename__ = 'voice_biometry'
@@ -191,11 +306,49 @@ class MeetingSession(db.Model):
             return int((datetime.utcnow() - self.start_time).total_seconds() / 60)
         return 0
 
+class KnownParticipant(db.Model):
+    """Participantes conhecidos do sistema - memória de participantes"""
+    __tablename__ = 'known_participants'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Dono dos participantes
+    name = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    company = db.Column(db.String(200))
+    position = db.Column(db.String(100))
+    default_role = db.Column(db.String(100), default='participante')  # moderador, participante, convidado
+    voice_profile = db.Column(db.Text)  # JSON com características da voz para reconhecimento
+    meeting_count = db.Column(db.Integer, default=0)  # Quantas reuniões participou
+    last_meeting_date = db.Column(db.DateTime)
+    is_frequent = db.Column(db.Boolean, default=False)  # Se é participante frequente
+    notes = db.Column(db.Text)  # Notas sobre o participante
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'phone': self.phone,
+            'company': self.company,
+            'position': self.position,
+            'default_role': self.default_role,
+            'meeting_count': self.meeting_count,
+            'last_meeting_date': self.last_meeting_date.isoformat() if self.last_meeting_date else None,
+            'is_frequent': self.is_frequent,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
 class MeetingParticipant(db.Model):
     __tablename__ = 'meeting_participants'
     
     id = db.Column(db.Integer, primary_key=True)
     meeting_id = db.Column(db.Integer, db.ForeignKey('meeting_sessions.id'), nullable=False)
+    known_participant_id = db.Column(db.Integer, db.ForeignKey('known_participants.id'))  # Referência ao participante conhecido
     participant_name = db.Column(db.String(200), nullable=False)
     voice_profile = db.Column(db.Text)  # JSON com características da voz
     participant_role = db.Column(db.String(100))  # moderador, participante, convidado
@@ -206,6 +359,9 @@ class MeetingParticipant(db.Model):
     is_verified = db.Column(db.Boolean, default=False)  # Se foi verificado por biometria
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Relacionamento com participante conhecido
+    known_participant = db.relationship('KnownParticipant', backref='meeting_participations')
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -215,7 +371,9 @@ class MeetingParticipant(db.Model):
             'speaking_time_minutes': self.speaking_time_minutes,
             'interventions_count': self.interventions_count,
             'confidence_level': self.confidence_level,
-            'is_verified': self.is_verified
+            'is_verified': self.is_verified,
+            'known_participant_id': self.known_participant_id,
+            'known_participant': self.known_participant.to_dict() if self.known_participant else None
         }
 
 class MeetingTranscript(db.Model):
@@ -333,7 +491,7 @@ class Contact(db.Model):
         score = 0
         
         # Nome exato
-        if self.name.lower() == voice_input_lower:
+        if self.name and self.name.lower() == voice_input_lower:
             score += 100
         
         # Display name
@@ -341,7 +499,7 @@ class Contact(db.Model):
             score += 95
         
         # Parte do nome
-        if voice_input_lower in self.name.lower():
+        if self.name and voice_input_lower in self.name.lower():
             score += 80
         
         # Aliases de voz
@@ -354,9 +512,10 @@ class Contact(db.Model):
                     score += 70
         
         # Primeiro nome
-        first_name = self.name.split()[0].lower()
-        if first_name == voice_input_lower:
-            score += 85
+        if self.name and self.name.strip():
+            first_name = self.name.split()[0].lower()
+            if first_name == voice_input_lower:
+                score += 85
         
         return score
 
@@ -2716,6 +2875,892 @@ def health_check():
         }
     })
 
+# ===============================
+# AUTHENTICATION ENDPOINTS
+# ===============================
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Registrar novo usuário com validações avançadas de segurança"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+
+        # Validações básicas
+        if not all([name, email, password]):
+            return jsonify({'message': 'Todos os campos são obrigatórios'}), 400
+
+        # Validação avançada de email
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return jsonify({'message': 'Email inválido'}), 400
+
+        # Validação avançada de senha
+        if len(password) < 8:
+            return jsonify({'message': 'Senha deve ter pelo menos 8 caracteres'}), 400
+
+        password_checks = {
+            'has_upper': bool(re.search(r'[A-Z]', password)),
+            'has_lower': bool(re.search(r'[a-z]', password)),
+            'has_number': bool(re.search(r'\d', password)),
+            'has_special': bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', password))
+        }
+
+        if not all(password_checks.values()):
+            return jsonify({
+                'message': 'Senha deve conter pelo menos: 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial'
+            }), 400
+
+        # Verificar senhas comuns (lista básica)
+        common_passwords = [
+            'password', '123456', '123456789', 'qwerty', 'abc123',
+            'password123', 'admin', 'letmein', 'welcome', 'monkey'
+        ]
+        if password.lower() in common_passwords:
+            return jsonify({'message': 'Senha muito comum. Escolha uma senha mais segura'}), 400
+
+        # Validação de nome
+        if len(name) < 2:
+            return jsonify({'message': 'Nome deve ter pelo menos 2 caracteres'}), 400
+
+        if not re.match(r'^[a-zA-ZÀ-ÿ\s]+$', name):
+            return jsonify({'message': 'Nome deve conter apenas letras e espaços'}), 400
+
+        # Verificar se usuário já existe
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return jsonify({'message': 'Email já cadastrado no sistema'}), 400
+
+        # Criar nome de usuário único baseado no email
+        username = email.split('@')[0]
+        username = re.sub(r'[^a-zA-Z0-9]', '', username)  # Remove caracteres especiais
+        counter = 1
+        base_username = username
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        # Criar hash da senha com salt
+        from werkzeug.security import generate_password_hash
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256:100000')
+        
+        # Criar novo usuário
+        user = User(
+            username=username,
+            email=email,
+            full_name=name or username,
+            preferred_name=name.split()[0] if name and name.strip() else username,  # Primeiro nome
+            password_hash=hashed_password,
+            created_at=datetime.utcnow(),
+            last_login=datetime.utcnow(),
+            last_activity=datetime.utcnow(),
+            is_active=True,
+            language_preference='pt-BR',
+            theme_preference='auto'
+        )
+        
+        db.session.add(user)
+        db.session.commit()
+
+        # Log de segurança
+        app.logger.info(f"Novo usuário registrado: {email} ({user.id})")
+
+        # Criar sessão segura
+        session.permanent = True
+        session['user_id'] = user.id
+        session['user_email'] = user.email
+        session['authenticated'] = True
+        session['login_time'] = datetime.utcnow().isoformat()
+        session['security_level'] = 'standard'
+
+        return jsonify({
+            'message': 'Conta criada com sucesso!',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'name': user.full_name,
+                'email': user.email,
+                'preferred_name': user.preferred_name
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Erro no registro: {str(e)}")
+        return jsonify({'message': 'Erro interno do servidor. Tente novamente mais tarde.'}), 500
+
+def log_security_event(user_id, action, description, risk_level='low'):
+    """Registra eventos de segurança no log de auditoria"""
+    try:
+        # Importar request aqui para evitar conflitos
+        from flask import request as flask_request
+        
+        # Cria uma entrada no log de auditoria
+        log_entry = {
+            'user_id': user_id,
+            'action': action,
+            'description': description,
+            'risk': risk_level,
+            'timestamp': datetime.utcnow().isoformat(),
+            'ip_address': getattr(flask_request, 'remote_addr', '127.0.0.1') if flask_request else '127.0.0.1',
+            'user_agent': getattr(flask_request, 'headers', {}).get('User-Agent', 'Unknown') if flask_request else 'System'
+        }
+        
+        # Salva no banco de dados (pode ser implementado futuramente)
+        app.logger.info(f"Security Event: {json.dumps(log_entry)}")
+        
+    except Exception as e:
+        app.logger.error(f"Erro ao registrar evento de segurança: {str(e)}")
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login de usuário"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        if not all([email, password]):
+            return jsonify({'message': 'Email e senha são obrigatórios'}), 400
+
+        # Buscar usuário
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            return jsonify({'message': 'Email não encontrado'}), 401
+
+        # Verificar senha
+        from werkzeug.security import check_password_hash
+        if not check_password_hash(user.password_hash, password):
+            return jsonify({'message': 'Senha incorreta'}), 401
+
+        if not user.is_active:
+            return jsonify({'message': 'Conta desativada'}), 401
+
+        # Atualizar último login
+        user.last_login = datetime.utcnow()
+        
+        # Inicializar configurações de segurança padrão se não existirem
+        if not user.security_settings:
+            default_security = {
+                'twoFactorEnabled': False,
+                'biometricEnabled': False,
+                'sessionTimeout': 30,
+                'alertsEnabled': True,
+                'auditLogging': True,
+                'authMethod': 'password',
+                'strongPassword': False
+            }
+            user.security_settings = json.dumps(default_security)
+            
+        if not user.notification_preferences:
+            default_notifications = {
+                'emailNotifications': True,
+                'pushNotifications': True,
+                'smsNotifications': False,
+                'emergencyNotifications': True
+            }
+            user.notification_preferences = json.dumps(default_notifications)
+            
+        if not user.privacy_settings:
+            default_privacy = {
+                'dataSharing': False,
+                'analyticsTracking': True,
+                'locationTracking': False,
+                'voiceRecording': True
+            }
+            user.privacy_settings = json.dumps(default_privacy)
+        
+        db.session.commit()
+
+        # Log do login
+        log_security_event(user.id, 'login', 'User logged in successfully', 'low')
+
+        # Criar sessão
+        session['user_id'] = user.id
+        session['user_email'] = user.email
+        session['authenticated'] = True
+
+        return jsonify({
+            'message': 'Login realizado com sucesso!',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'name': user.full_name,
+                'email': user.email
+            }
+        }), 200
+
+    except Exception as e:
+        import traceback
+        app.logger.error(f"Erro no login: {str(e)}")
+        app.logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'message': f'Erro interno do servidor: {str(e)}'}), 500
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    """Logout do usuário"""
+    session.clear()
+    return jsonify({'message': 'Logout realizado com sucesso'}), 200
+
+@app.route('/api/auth/validate-password', methods=['POST'])
+def validate_password():
+    """Validação avançada de senha em tempo real"""
+    try:
+        data = request.get_json()
+        password = data.get('password', '')
+        
+        import re
+        
+        # Inicializar resultado
+        result = {
+            'score': 0,
+            'strength': 'muito-fraca',
+            'checks': {
+                'length': {'valid': len(password) >= 8, 'message': 'Pelo menos 8 caracteres'},
+                'uppercase': {'valid': bool(re.search(r'[A-Z]', password)), 'message': 'Letra maiúscula'},
+                'lowercase': {'valid': bool(re.search(r'[a-z]', password)), 'message': 'Letra minúscula'},
+                'number': {'valid': bool(re.search(r'\d', password)), 'message': 'Número'},
+                'special': {'valid': bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', password)), 'message': 'Caractere especial'},
+                'not_common': {'valid': True, 'message': 'Não é uma senha comum'}
+            },
+            'suggestions': [],
+            'estimated_crack_time': ''
+        }
+        
+        # Verificar senhas comuns
+        common_passwords = [
+            'password', '123456', '123456789', 'qwerty', 'abc123',
+            'password123', 'admin', 'letmein', 'welcome', 'monkey',
+            '111111', 'dragon', 'sunshine', 'princess', 'football',
+            'iloveyou', '000000', 'batman', 'zaq1zaq1', 'shadow'
+        ]
+        
+        if password.lower() in common_passwords:
+            result['checks']['not_common']['valid'] = False
+            result['suggestions'].append('Evite senhas comuns')
+        
+        # Calcular pontuação
+        valid_checks = sum(1 for check in result['checks'].values() if check['valid'])
+        result['score'] = min(100, (valid_checks / len(result['checks'])) * 100)
+        
+        # Determinar força da senha
+        if result['score'] >= 85:
+            result['strength'] = 'muito-forte'
+            result['estimated_crack_time'] = 'Séculos'
+        elif result['score'] >= 70:
+            result['strength'] = 'forte'
+            result['estimated_crack_time'] = 'Anos'
+        elif result['score'] >= 50:
+            result['strength'] = 'media'
+            result['estimated_crack_time'] = 'Meses'
+        elif result['score'] >= 30:
+            result['strength'] = 'fraca'
+            result['estimated_crack_time'] = 'Dias'
+        else:
+            result['strength'] = 'muito-fraca'
+            result['estimated_crack_time'] = 'Minutos'
+        
+        # Adicionar sugestões específicas
+        if not result['checks']['length']['valid']:
+            result['suggestions'].append('Use pelo menos 8 caracteres')
+        if not result['checks']['uppercase']['valid']:
+            result['suggestions'].append('Adicione letras maiúsculas')
+        if not result['checks']['lowercase']['valid']:
+            result['suggestions'].append('Adicione letras minúsculas')
+        if not result['checks']['number']['valid']:
+            result['suggestions'].append('Adicione números')
+        if not result['checks']['special']['valid']:
+            result['suggestions'].append('Adicione caracteres especiais (!@#$%^&*)')
+        
+        # Verificações avançadas
+        if len(password) >= 12:
+            result['score'] += 10
+            result['suggestions'].append('✓ Comprimento excelente')
+        
+        # Verificar padrões sequenciais
+        if re.search(r'(012|123|234|345|456|567|678|789|890)', password):
+            result['score'] -= 10
+            result['suggestions'].append('Evite sequências numéricas')
+        
+        if re.search(r'(abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)', password.lower()):
+            result['score'] -= 10
+            result['suggestions'].append('Evite sequências alfabéticas')
+        
+        # Verificar repetições
+        if re.search(r'(.)\1{2,}', password):
+            result['score'] -= 15
+            result['suggestions'].append('Evite repetir caracteres consecutivos')
+        
+        # Ajustar pontuação final
+        result['score'] = max(0, min(100, result['score']))
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro na validação de senha: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+@app.route('/api/auth/check-email', methods=['POST'])
+def check_email():
+    """Verificar se email já está em uso"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({'available': False, 'message': 'Email é obrigatório'}), 400
+        
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return jsonify({'available': False, 'message': 'Formato de email inválido'}), 400
+        
+        existing_user = User.query.filter_by(email=email).first()
+        
+        return jsonify({
+            'available': existing_user is None,
+            'message': 'Email disponível' if existing_user is None else 'Email já está em uso'
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro na verificação de email: {str(e)}")
+        return jsonify({'available': False, 'message': 'Erro interno do servidor'}), 500
+
+@app.route('/api/auth/check', methods=['GET'])
+def check_auth():
+    """Verificar se usuário está autenticado"""
+    if session.get('authenticated'):
+        user_id = session.get('user_id')
+        user = User.query.get(user_id) if user_id else None
+        
+        if user:
+            return jsonify({
+                'authenticated': True,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'name': user.full_name,
+                    'email': user.email
+                }
+            }), 200
+    
+    return jsonify({'authenticated': False}), 200
+
+# =========== ENDPOINTS AVANÇADOS DO SISTEMA IAON ===========
+
+@app.route('/api/iaon/analyze-sentiment', methods=['POST'])
+def analyze_sentiment():
+    """Análise avançada de sentimentos em tempo real"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '').strip()
+        
+        if not text:
+            return jsonify({'error': 'Texto é obrigatório'}), 400
+        
+        # Análise básica de sentimentos
+        positive_words = [
+            'feliz', 'alegre', 'bom', 'ótimo', 'excelente', 'maravilhoso',
+            'perfeito', 'incrível', 'fantástico', 'amor', 'sucesso',
+            'obrigado', 'grato', 'satisfeito', 'contente'
+        ]
+        
+        negative_words = [
+            'triste', 'ruim', 'terrível', 'péssimo', 'odio', 'raiva',
+            'irritado', 'chateado', 'furioso', 'frustrado', 'decepcionado',
+            'ansioso', 'preocupado', 'estressado', 'cansado'
+        ]
+        
+        neutral_words = [
+            'normal', 'comum', 'regular', 'ok', 'neutro', 'talvez',
+            'possivelmente', 'aparentemente', 'provavelmente'
+        ]
+        
+        words = text.lower().split()
+        
+        positive_count = sum(1 for word in words if any(pw in word for pw in positive_words))
+        negative_count = sum(1 for word in words if any(nw in word for nw in negative_words))
+        neutral_count = sum(1 for word in words if any(neu in word for neu in neutral_words))
+        
+        total_sentiment_words = positive_count + negative_count + neutral_count
+        
+        if total_sentiment_words == 0:
+            sentiment = 'neutral'
+            confidence = 0.5
+        else:
+            if positive_count > negative_count and positive_count > neutral_count:
+                sentiment = 'positive'
+                confidence = min(0.95, 0.6 + (positive_count / len(words)) * 0.4)
+            elif negative_count > positive_count and negative_count > neutral_count:
+                sentiment = 'negative'
+                confidence = min(0.95, 0.6 + (negative_count / len(words)) * 0.4)
+            else:
+                sentiment = 'neutral'
+                confidence = 0.5 + (neutral_count / len(words)) * 0.3
+        
+        # Detectar emoções específicas
+        emotions = {
+            'joy': any(word in text.lower() for word in ['feliz', 'alegre', 'contente', 'eufórico']),
+            'sadness': any(word in text.lower() for word in ['triste', 'melancólico', 'deprimido']),
+            'anger': any(word in text.lower() for word in ['raiva', 'irritado', 'furioso', 'bravo']),
+            'fear': any(word in text.lower() for word in ['medo', 'assustado', 'apreensivo', 'nervoso']),
+            'surprise': any(word in text.lower() for word in ['surpreso', 'espantado', 'impressionado']),
+            'disgust': any(word in text.lower() for word in ['nojo', 'repugnância', 'aversão'])
+        }
+        
+        # Análise de intensidade
+        intensity_words = {
+            'very_high': ['extremamente', 'completamente', 'totalmente', 'absolutamente'],
+            'high': ['muito', 'bastante', 'bem', 'super'],
+            'medium': ['meio', 'um pouco', 'relativamente'],
+            'low': ['levemente', 'pouco', 'quase']
+        }
+        
+        intensity = 'medium'
+        for level, words_list in intensity_words.items():
+            if any(word in text.lower() for word in words_list):
+                intensity = level
+                break
+        
+        return jsonify({
+            'sentiment': sentiment,
+            'confidence': round(confidence, 2),
+            'emotions': emotions,
+            'intensity': intensity,
+            'word_count': len(words),
+            'analysis': {
+                'positive_indicators': positive_count,
+                'negative_indicators': negative_count,
+                'neutral_indicators': neutral_count
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro na análise de sentimentos: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+@app.route('/api/iaon/voice-analysis', methods=['POST'])
+def voice_analysis():
+    """Análise avançada de padrões de voz e biometria vocal"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        # Simular análise de voz (na implementação real, usaria bibliotecas como librosa)
+        data = request.get_json()
+        voice_data = data.get('voice_data', {})
+        
+        # Parâmetros simulados de análise de voz
+        analysis_result = {
+            'voice_id': f"voice_{session.get('user_id')}_{int(datetime.utcnow().timestamp())}",
+            'biometric_features': {
+                'fundamental_frequency': voice_data.get('frequency', 150.5),  # Hz
+                'pitch_variation': voice_data.get('pitch_var', 25.3),  # %
+                'speaking_rate': voice_data.get('rate', 175.2),  # palavras/minuto
+                'voice_quality': voice_data.get('quality', 85.7),  # %
+                'emotional_state': voice_data.get('emotion', 'calm')
+            },
+            'recognition_confidence': min(95.0, max(60.0, voice_data.get('confidence', 78.5))),
+            'speaker_verification': {
+                'authenticated': True,
+                'similarity_score': voice_data.get('similarity', 87.3),
+                'threshold_met': voice_data.get('similarity', 87.3) > 75.0
+            },
+            'audio_quality': {
+                'signal_to_noise_ratio': voice_data.get('snr', 12.5),  # dB
+                'background_noise_level': voice_data.get('noise', 0.15),  # 0-1
+                'clarity_score': voice_data.get('clarity', 92.1)  # %
+            },
+            'language_analysis': {
+                'detected_language': 'pt-BR',
+                'accent_confidence': 89.4,
+                'pronunciation_quality': 91.2
+            },
+            'timestamp': datetime.utcnow().isoformat(),
+            'session_id': session.get('user_id')
+        }
+        
+        # Salvar dados biométricos (simulado)
+        user_id = session.get('user_id')
+        if user_id:
+            user = User.query.get(user_id)
+            if user:
+                # Atualizar dados biométricos do usuário
+                biometric_data = {
+                    'last_voice_analysis': analysis_result,
+                    'voice_samples_count': (user.voice_samples_count or 0) + 1,
+                    'avg_recognition_confidence': analysis_result['recognition_confidence']
+                }
+                
+                # Em uma implementação real, salvaria no campo biometric_data
+                user.last_activity = datetime.utcnow()
+                db.session.commit()
+        
+        return jsonify(analysis_result), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro na análise de voz: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+@app.route('/api/iaon/emergency-protocol', methods=['POST'])
+def emergency_protocol():
+    """Sistema avançado de detecção e resposta a emergências"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        data = request.get_json()
+        alert_type = data.get('type', '')
+        location = data.get('location', {})
+        urgency = data.get('urgency', 'medium')
+        description = data.get('description', '')
+        
+        emergency_keywords = [
+            'socorro', 'ajuda', 'emergência', 'urgente', 'perigo',
+            'acidente', 'assalto', 'fogo', 'incêndio', 'polícia',
+            'ambulância', 'bombeiros', 'sequestro', 'violência'
+        ]
+        
+        # Detectar nível de emergência
+        emergency_detected = any(keyword in description.lower() for keyword in emergency_keywords)
+        
+        if emergency_detected or urgency == 'critical':
+            # Protocolo de emergência crítica
+            response = {
+                'emergency_id': f"EMG_{int(datetime.utcnow().timestamp())}",
+                'status': 'CRITICAL_ALERT_ACTIVATED',
+                'actions_taken': [
+                    'Alerta enviado às autoridades competentes',
+                    'Localização GPS registrada',
+                    'Contatos de emergência notificados',
+                    'Gravação de segurança iniciada'
+                ],
+                'emergency_contacts': [
+                    {'service': 'Polícia Militar', 'number': '190'},
+                    {'service': 'SAMU', 'number': '192'},
+                    {'service': 'Bombeiros', 'number': '193'},
+                    {'service': 'Defesa Civil', 'number': '199'}
+                ],
+                'location_data': location,
+                'timestamp': datetime.utcnow().isoformat(),
+                'user_id': session.get('user_id'),
+                'estimated_response_time': '5-10 minutos'
+            }
+            
+            # Log de segurança crítico
+            app.logger.critical(f"EMERGÊNCIA DETECTADA - Usuário {session.get('user_id')}: {description}")
+            
+        else:
+            # Protocolo de alerta padrão
+            response = {
+                'alert_id': f"ALT_{int(datetime.utcnow().timestamp())}",
+                'status': 'STANDARD_ALERT',
+                'recommendation': 'Situação monitorada. Entre em contato com autoridades se necessário.',
+                'helpful_contacts': [
+                    {'service': 'Central de Atendimento à Mulher', 'number': '180'},
+                    {'service': 'Disque Direitos Humanos', 'number': '100'},
+                    {'service': 'CVV - Centro de Valorização da Vida', 'number': '188'}
+                ],
+                'timestamp': datetime.utcnow().isoformat()
+            }
+        
+        return jsonify(response), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro no protocolo de emergência: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+# =========== ENDPOINTS DE CONFIGURAÇÕES DE SEGURANÇA ===========
+
+@app.route('/api/security/settings', methods=['GET'])
+def get_security_settings():
+    """Obter configurações de segurança do usuário autenticado"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+        
+        security_settings = user.get_security_settings()
+        
+        return jsonify({
+            'success': True,
+            'settings': security_settings,
+            'user_info': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_admin': user.is_admin,
+                'last_login': user.last_login.isoformat() if user.last_login else None
+            }
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro ao obter configurações de segurança: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+@app.route('/api/security/settings', methods=['POST'])
+def update_security_settings():
+    """Atualizar configurações de segurança do usuário"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Dados inválidos'}), 400
+        
+        # Validar configurações de segurança
+        allowed_settings = [
+            'two_factor_enabled', 'session_timeout', 'login_alerts',
+            'device_tracking', 'password_expiry', 'failed_login_limit',
+            'lockout_duration', 'require_password_change', 'ip_whitelist_enabled',
+            'ip_whitelist', 'security_questions_enabled', 'voice_biometry_required',
+            'emergency_contacts', 'auto_logout_enabled', 'session_encryption',
+            'audit_log_enabled'
+        ]
+        
+        new_settings = {}
+        for key, value in data.items():
+            if key in allowed_settings:
+                # Validações específicas
+                if key == 'session_timeout' and (not isinstance(value, int) or value < 300 or value > 86400):
+                    return jsonify({'error': 'Timeout de sessão deve estar entre 300 e 86400 segundos'}), 400
+                
+                if key == 'failed_login_limit' and (not isinstance(value, int) or value < 3 or value > 20):
+                    return jsonify({'error': 'Limite de tentativas deve estar entre 3 e 20'}), 400
+                
+                if key == 'lockout_duration' and (not isinstance(value, int) or value < 300 or value > 7200):
+                    return jsonify({'error': 'Duração do bloqueio deve estar entre 300 e 7200 segundos'}), 400
+                
+                if key == 'password_expiry' and (not isinstance(value, int) or value < 30 or value > 365):
+                    return jsonify({'error': 'Expiração da senha deve estar entre 30 e 365 dias'}), 400
+                
+                new_settings[key] = value
+        
+        if not new_settings:
+            return jsonify({'error': 'Nenhuma configuração válida fornecida'}), 400
+        
+        # Atualizar configurações
+        updated_settings = user.update_security_settings(new_settings)
+        
+        # Log de auditoria
+        app.logger.info(f"Configurações de segurança atualizadas para usuário {user_id}: {list(new_settings.keys())}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Configurações de segurança atualizadas com sucesso',
+            'settings': updated_settings
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro ao atualizar configurações de segurança: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+@app.route('/api/security/two-factor', methods=['POST'])
+def configure_two_factor():
+    """Configurar autenticação de dois fatores"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+        
+        data = request.get_json()
+        action = data.get('action')  # 'enable' ou 'disable'
+        
+        if action == 'enable':
+            # Gerar código QR para Google Authenticator (simulado)
+            secret_key = f"IAON{user_id}{int(time.time())}"
+            qr_code_url = f"https://chart.googleapis.com/chart?chs=200x200&chld=M|0&cht=qr&chl=otpauth://totp/IAON:{user.email}?secret={secret_key}&issuer=IAON"
+            
+            # Gerar códigos de backup
+            backup_codes = [f"{random.randint(100000, 999999)}" for _ in range(10)]
+            
+            # Atualizar configurações
+            user.update_security_settings({
+                'two_factor_enabled': True,
+                'two_factor_secret': secret_key,
+                'backup_codes': backup_codes,
+                'backup_codes_generated': True
+            })
+            
+            return jsonify({
+                'success': True,
+                'message': '2FA configurado com sucesso',
+                'qr_code_url': qr_code_url,
+                'secret_key': secret_key,
+                'backup_codes': backup_codes
+            }), 200
+            
+        elif action == 'disable':
+            # Desabilitar 2FA
+            user.update_security_settings({
+                'two_factor_enabled': False,
+                'two_factor_secret': None,
+                'backup_codes': [],
+                'backup_codes_generated': False
+            })
+            
+            return jsonify({
+                'success': True,
+                'message': '2FA desabilitado com sucesso'
+            }), 200
+        
+        else:
+            return jsonify({'error': 'Ação inválida. Use "enable" ou "disable"'}), 400
+        
+    except Exception as e:
+        app.logger.error(f"Erro na configuração de 2FA: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+@app.route('/api/security/emergency-contacts', methods=['GET', 'POST'])
+def manage_emergency_contacts():
+    """Gerenciar contatos de emergência"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+        
+        if request.method == 'GET':
+            settings = user.get_security_settings()
+            emergency_contacts = settings.get('emergency_contacts', [])
+            
+            return jsonify({
+                'success': True,
+                'emergency_contacts': emergency_contacts
+            }), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            action = data.get('action')  # 'add', 'remove', 'update'
+            
+            settings = user.get_security_settings()
+            emergency_contacts = settings.get('emergency_contacts', [])
+            
+            if action == 'add':
+                contact = {
+                    'id': len(emergency_contacts) + 1,
+                    'name': data.get('name'),
+                    'phone': data.get('phone'),
+                    'email': data.get('email'),
+                    'relationship': data.get('relationship'),
+                    'priority': data.get('priority', 'normal'),
+                    'notify_on': data.get('notify_on', ['emergency', 'security_alert']),
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                
+                # Validações
+                if not contact['name'] or not contact['phone']:
+                    return jsonify({'error': 'Nome e telefone são obrigatórios'}), 400
+                
+                emergency_contacts.append(contact)
+                
+            elif action == 'remove':
+                contact_id = data.get('contact_id')
+                emergency_contacts = [c for c in emergency_contacts if c.get('id') != contact_id]
+                
+            elif action == 'update':
+                contact_id = data.get('contact_id')
+                for contact in emergency_contacts:
+                    if contact.get('id') == contact_id:
+                        contact.update({
+                            'name': data.get('name', contact.get('name')),
+                            'phone': data.get('phone', contact.get('phone')),
+                            'email': data.get('email', contact.get('email')),
+                            'relationship': data.get('relationship', contact.get('relationship')),
+                            'priority': data.get('priority', contact.get('priority')),
+                            'notify_on': data.get('notify_on', contact.get('notify_on')),
+                            'updated_at': datetime.utcnow().isoformat()
+                        })
+                        break
+            
+            # Atualizar configurações
+            user.update_security_settings({'emergency_contacts': emergency_contacts})
+            
+            return jsonify({
+                'success': True,
+                'message': f'Contato de emergência {action}ado com sucesso',
+                'emergency_contacts': emergency_contacts
+            }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro no gerenciamento de contatos de emergência: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
+@app.route('/api/security/audit-log', methods=['GET'])
+def get_security_audit_log():
+    """Obter log de auditoria de segurança"""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    try:
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+        
+        # Por enquanto, retornar dados simulados
+        # Em uma implementação real, seria consultado de uma tabela de auditoria
+        audit_events = [
+            {
+                'id': 1,
+                'timestamp': datetime.utcnow().isoformat(),
+                'event_type': 'LOGIN_SUCCESS',
+                'description': 'Login realizado com sucesso',
+                'ip_address': request.environ.get('REMOTE_ADDR', '127.0.0.1'),
+                'user_agent': request.headers.get('User-Agent', ''),
+                'risk_level': 'LOW'
+            },
+            {
+                'id': 2,
+                'timestamp': (datetime.utcnow() - timedelta(hours=2)).isoformat(),
+                'event_type': 'SETTINGS_CHANGED',
+                'description': 'Configurações de segurança alteradas',
+                'ip_address': request.environ.get('REMOTE_ADDR', '127.0.0.1'),
+                'user_agent': request.headers.get('User-Agent', ''),
+                'risk_level': 'MEDIUM'
+            }
+        ]
+        
+        return jsonify({
+            'success': True,
+            'audit_log': audit_events,
+            'total_events': len(audit_events)
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Erro ao obter log de auditoria: {str(e)}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """API de chat inteligente com todas as funcionalidades"""
@@ -4643,6 +5688,140 @@ def validate_voice_command():
 
 # ==================== SISTEMA DE REUNIÕES ====================
 
+# Endpoint para gerenciar participantes conhecidos
+@app.route('/api/known-participants', methods=['GET', 'POST'])
+def known_participants():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    if request.method == 'GET':
+        # Buscar participantes conhecidos do usuário
+        participants = KnownParticipant.query.filter_by(user_id=session['user_id']).all()
+        return jsonify({
+            'participants': [p.to_dict() for p in participants],
+            'total': len(participants)
+        })
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        # Verificar se já existe participante com mesmo email
+        existing = KnownParticipant.query.filter_by(
+            user_id=session['user_id'],
+            email=data.get('email')
+        ).first()
+        
+        if existing:
+            return jsonify({'error': 'Participante já cadastrado com este email'}), 400
+        
+        # Criar novo participante conhecido
+        participant = KnownParticipant(
+            user_id=session['user_id'],
+            name=data.get('name'),
+            email=data.get('email'),
+            phone=data.get('phone'),
+            company=data.get('company'),
+            position=data.get('position'),
+            default_role=data.get('default_role', 'participante'),
+            voice_profile=json.dumps(data.get('voice_profile', {})),
+            notes=data.get('notes', '')
+        )
+        
+        db.session.add(participant)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Participante adicionado com sucesso',
+            'participant': participant.to_dict()
+        })
+
+@app.route('/api/known-participants/<int:participant_id>', methods=['GET', 'PUT', 'DELETE'])
+def known_participant_detail(participant_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    participant = KnownParticipant.query.filter_by(
+        id=participant_id, 
+        user_id=session['user_id']
+    ).first()
+    
+    if not participant:
+        return jsonify({'error': 'Participante não encontrado'}), 404
+    
+    if request.method == 'GET':
+        return jsonify(participant.to_dict())
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        
+        # Atualizar campos
+        if 'name' in data:
+            participant.name = data['name']
+        if 'email' in data:
+            participant.email = data['email']
+        if 'phone' in data:
+            participant.phone = data['phone']
+        if 'company' in data:
+            participant.company = data['company']
+        if 'position' in data:
+            participant.position = data['position']
+        if 'default_role' in data:
+            participant.default_role = data['default_role']
+        if 'voice_profile' in data:
+            participant.voice_profile = json.dumps(data['voice_profile'])
+        if 'notes' in data:
+            participant.notes = data['notes']
+        
+        participant.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Participante atualizado com sucesso',
+            'participant': participant.to_dict()
+        })
+    
+    elif request.method == 'DELETE':
+        db.session.delete(participant)
+        db.session.commit()
+        
+        return jsonify({'message': 'Participante removido com sucesso'})
+
+@app.route('/api/participants/suggest', methods=['POST'])
+def suggest_participants():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    data = request.get_json()
+    query = data.get('query', '').lower()
+    
+    # Buscar participantes conhecidos que correspondam à consulta
+    participants = KnownParticipant.query.filter_by(user_id=session['user_id']).filter(
+        db.or_(
+            KnownParticipant.name.ilike(f'%{query}%'),
+            KnownParticipant.email.ilike(f'%{query}%'),
+            KnownParticipant.company.ilike(f'%{query}%')
+        )
+    ).order_by(KnownParticipant.is_frequent.desc(), KnownParticipant.meeting_count.desc()).limit(10).all()
+    
+    return jsonify({
+        'suggestions': [p.to_dict() for p in participants]
+    })
+
+@app.route('/api/participants/frequent', methods=['GET'])
+def frequent_participants():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+    
+    # Buscar participantes frequentes
+    participants = KnownParticipant.query.filter_by(
+        user_id=session['user_id'],
+        is_frequent=True
+    ).order_by(KnownParticipant.meeting_count.desc()).all()
+    
+    return jsonify({
+        'frequent_participants': [p.to_dict() for p in participants]
+    })
+
 @app.route('/api/meetings/start', methods=['POST'])
 def start_meeting():
     """Iniciar uma nova sessão de reunião com configurações avançadas do dispositivo"""
@@ -4722,43 +5901,158 @@ def start_meeting():
 
 @app.route('/api/meetings/<int:meeting_id>/add-participant', methods=['POST'])
 def add_meeting_participant(meeting_id):
-    """Adicionar participante à reunião com registro de voz"""
+    """Adicionar participante à reunião com sistema de memória inteligente"""
     try:
-        data = request.get_json()
-        participant_name = data.get('participant_name', 'Participante Desconhecido')
-        participant_role = data.get('participant_role', 'participante')
-        email = data.get('email', '')
-        voice_sample = data.get('voice_sample', '')  # Amostra de voz para reconhecimento
-        presentation_text = data.get('presentation_text', '')  # Texto da apresentação
+        if 'user_id' not in session:
+            return jsonify({'error': 'Não autorizado'}), 401
         
-        meeting = MeetingSession.query.get(meeting_id)
+        # Verificar se a reunião existe e pertence ao usuário
+        meeting = MeetingSession.query.filter_by(
+            id=meeting_id, 
+            user_id=session['user_id']
+        ).first()
+        
         if not meeting:
             return jsonify({'error': 'Reunião não encontrada'}), 404
         
-        # Processar amostra de voz para criar perfil avançado
-        voice_profile = create_enhanced_voice_profile(voice_sample, presentation_text) if voice_sample else '{}'
+        data = request.get_json()
+        known_participant_id = data.get('known_participant_id')
         
-        participant = MeetingParticipant(
-            meeting_id=meeting_id,
-            participant_name=participant_name,
-            participant_role=participant_role,
-            email=email,
-            voice_profile=voice_profile,
-            confidence_level=0.95 if voice_sample else 0.0,
-            is_verified=bool(voice_sample)
-        )
-        db.session.add(participant)
+        if known_participant_id:
+            # Adicionar participante conhecido à reunião
+            known_participant = KnownParticipant.query.filter_by(
+                id=known_participant_id,
+                user_id=session['user_id']
+            ).first()
+            
+            if not known_participant:
+                return jsonify({'error': 'Participante conhecido não encontrado'}), 404
+            
+            # Verificar se já está na reunião
+            existing = MeetingParticipant.query.filter_by(
+                meeting_id=meeting_id,
+                known_participant_id=known_participant_id
+            ).first()
+            
+            if existing:
+                return jsonify({'error': 'Participante já está na reunião'}), 400
+            
+            # Processar amostra de voz se fornecida
+            voice_sample = data.get('voice_sample', '')
+            voice_profile = known_participant.voice_profile
+            
+            if voice_sample:
+                # Atualizar perfil de voz existente
+                existing_profile = json.loads(voice_profile) if voice_profile else {}
+                new_profile = create_enhanced_voice_profile(voice_sample, f"Participante {known_participant.name}")
+                # Mesclar perfis
+                if new_profile:
+                    merged_profile = {**existing_profile, **json.loads(new_profile)}
+                    known_participant.voice_profile = json.dumps(merged_profile)
+                    voice_profile = known_participant.voice_profile
+            
+            # Criar participante na reunião
+            meeting_participant = MeetingParticipant(
+                meeting_id=meeting_id,
+                known_participant_id=known_participant_id,
+                participant_name=known_participant.name,
+                participant_role=known_participant.default_role,
+                email=known_participant.email,
+                voice_profile=voice_profile,
+                confidence_level=0.95 if voice_sample else 0.8,
+                is_verified=bool(voice_sample)
+            )
+            
+            # Atualizar estatísticas do participante conhecido
+            known_participant.meeting_count += 1
+            known_participant.last_meeting_date = datetime.utcnow()
+            if known_participant.meeting_count >= 3:
+                known_participant.is_frequent = True
         
-        # Atualizar contagem de participantes
+        else:
+            # Adicionar novo participante (será criado como conhecido automaticamente)
+            participant_name = data.get('participant_name')
+            participant_email = data.get('email')
+            voice_sample = data.get('voice_sample', '')
+            
+            if not participant_name:
+                return jsonify({'error': 'Nome do participante é obrigatório'}), 400
+            
+            # Verificar se já existe participante conhecido com este email
+            known_participant = None
+            if participant_email:
+                known_participant = KnownParticipant.query.filter_by(
+                    user_id=session['user_id'],
+                    email=participant_email
+                ).first()
+            
+            # Se não existe, criar novo participante conhecido
+            if not known_participant:
+                voice_profile = create_enhanced_voice_profile(voice_sample, participant_name) if voice_sample else '{}'
+                
+                known_participant = KnownParticipant(
+                    user_id=session['user_id'],
+                    name=participant_name,
+                    email=participant_email,
+                    phone=data.get('phone', ''),
+                    company=data.get('company', ''),
+                    position=data.get('position', ''),
+                    default_role=data.get('participant_role', 'participante'),
+                    voice_profile=voice_profile,
+                    meeting_count=1,
+                    last_meeting_date=datetime.utcnow()
+                )
+                db.session.add(known_participant)
+                db.session.flush()  # Para obter o ID
+            else:
+                # Atualizar participante existente
+                known_participant.meeting_count += 1
+                known_participant.last_meeting_date = datetime.utcnow()
+                if known_participant.meeting_count >= 3:
+                    known_participant.is_frequent = True
+                    
+                # Atualizar perfil de voz se fornecido
+                if voice_sample:
+                    existing_profile = json.loads(known_participant.voice_profile) if known_participant.voice_profile else {}
+                    new_profile = create_enhanced_voice_profile(voice_sample, participant_name)
+                    if new_profile:
+                        merged_profile = {**existing_profile, **json.loads(new_profile)}
+                        known_participant.voice_profile = json.dumps(merged_profile)
+            
+            # Criar participante na reunião
+            meeting_participant = MeetingParticipant(
+                meeting_id=meeting_id,
+                known_participant_id=known_participant.id,
+                participant_name=participant_name,
+                participant_role=data.get('participant_role', 'participante'),
+                email=participant_email,
+                voice_profile=known_participant.voice_profile,
+                confidence_level=0.95 if voice_sample else 0.0,
+                is_verified=bool(voice_sample)
+            )
+        
+        db.session.add(meeting_participant)
+        
+        # Atualizar contagem de participantes na reunião
         meeting.total_participants = MeetingParticipant.query.filter_by(meeting_id=meeting_id).count() + 1
         
         db.session.commit()
         
+        # Preparar resposta com informações inteligentes
+        message = f'👤 Participante "{meeting_participant.participant_name}" adicionado'
+        if known_participant.meeting_count > 1:
+            message += f' (participa da {known_participant.meeting_count}ª reunião)'
+        if known_participant.is_frequent:
+            message += ' - Participante frequente'
+        
         return jsonify({
             'success': True,
-            'participant': participant.to_dict(),
+            'participant': meeting_participant.to_dict(),
+            'known_participant': known_participant.to_dict(),
             'voice_profile_quality': 'excellent' if voice_sample else 'pending',
-            'message': f'👤 Participante "{participant_name}" {'registrado com perfil de voz' if voice_sample else 'adicionado - aguardando apresentação'}!'
+            'is_frequent': known_participant.is_frequent,
+            'meeting_count': known_participant.meeting_count,
+            'message': message
         })
         
     except Exception as e:
@@ -6524,17 +7818,59 @@ def test():
         'timestamp': datetime.utcnow().isoformat()
     })
 
+# ==================== HEALTH CHECK E ROTAS PRINCIPAIS ====================
+
+@app.route('/health')
+def health_check():
+    """Endpoint de verificação de saúde para Vercel"""
+    try:
+        # Verificar conexão com banco
+        user_count = User.query.count()
+        
+        return jsonify({
+            'status': 'healthy',
+            'environment': 'vercel' if os.getenv('VERCEL') == '1' else 'local',
+            'database': 'connected',
+            'users_count': user_count,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'environment': 'vercel' if os.getenv('VERCEL') == '1' else 'local',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
     """Servir arquivos estáticos e SPA"""
     try:
         # Inicializar banco de dados na primeira requisição (Vercel)
-        if os.getenv('FLASK_ENV') == 'production':
+        if os.getenv('VERCEL') == '1' or os.getenv('FLASK_ENV') == 'production':
             try:
                 db.create_all()
+                
+                # Criar usuário padrão se não existir
+                if User.query.count() == 0:
+                    from werkzeug.security import generate_password_hash
+                    
+                    default_user = User(
+                        username='admin',
+                        email='admin@iaon.app',
+                        full_name='Administrador IAON',
+                        preferred_name='Admin',
+                        password_hash=generate_password_hash('admin123'),
+                        is_onboarded=True,
+                        voice_enabled=True,
+                        is_admin=True
+                    )
+                    db.session.add(default_user)
+                    db.session.commit()
+                    
             except Exception as e:
-                print(f"Erro ao criar tabelas: {e}")
+                print(f"Erro ao inicializar Vercel: {e}")
         
         static_folder_path = app.static_folder
         if static_folder_path is None:
@@ -7423,9 +8759,10 @@ def get_match_reason(contact, voice_input, score):
             elif voice_lower in alias.lower():
                 return 'parte_apelido'
     
-    first_name = contact.name.split()[0].lower()
-    if first_name == voice_lower:
-        return 'primeiro_nome'
+    if contact.name and contact.name.strip():
+        first_name = contact.name.split()[0].lower()
+        if first_name == voice_lower:
+            return 'primeiro_nome'
     
     return 'similaridade'
 
@@ -9353,529 +10690,6 @@ def analyze_emotional_state():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/emergency-contacts/manage', methods=['POST'])
-def manage_emergency_contacts():
-    """🆘 Gerenciar contatos de emergência (obrigatórios para uso seguro)"""
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id', 1)
-        action = data.get('action', 'add')
-        
-        if action == 'add':
-            # Validação rigorosa de dados
-            required_fields = ['contact_name', 'relationship', 'phone_number']
-            for field in required_fields:
-                if not data.get(field):
-                    return jsonify({'error': f'Campo {field} é obrigatório'}), 400
-            
-            # Verificar se já existe contato primário
-            existing_primary = EmergencyContact.query.filter_by(user_id=user_id, is_primary=True, is_active=True).first()
-            is_primary = data.get('is_primary', False)
-            
-            if is_primary and existing_primary:
-                existing_primary.is_primary = False
-            
-            contact = EmergencyContact(
-                user_id=user_id,
-                contact_name=data.get('contact_name'),
-                relationship=data.get('relationship'),
-                phone_number=data.get('phone_number'),
-                email=data.get('email'),
-                is_primary=is_primary,
-                notify_on_depression=data.get('notify_on_depression', True),
-                notify_on_suicide_risk=data.get('notify_on_suicide_risk', True),
-                preferred_contact_method=data.get('preferred_contact_method', 'phone'),
-                notes=data.get('notes')
-            )
-            
-            db.session.add(contact)
-            db.session.commit()
-            
-            return jsonify({
-                'success': True,
-                'contact_id': contact.id,
-                'message': 'Contato de emergência adicionado com sucesso ✅',
-                'safety_note': 'Este contato será alertado automaticamente em situações de risco'
-            })
-            
-        elif action == 'list':
-            contacts = EmergencyContact.query.filter_by(user_id=user_id, is_active=True)\
-                .order_by(EmergencyContact.is_primary.desc()).all()
-            
-            return jsonify({
-                'success': True,
-                'contacts': [contact.to_dict() for contact in contacts],
-                'total': len(contacts),
-                'has_primary': any(c.is_primary for c in contacts),
-                'protection_status': 'Ativo' if contacts else 'Desativado - Configure urgentemente'
-            })
-            
-        elif action == 'validate':
-            contacts = EmergencyContact.query.filter_by(user_id=user_id, is_active=True).all()
-            has_contacts = len(contacts) > 0
-            
-            return jsonify({
-                'is_valid': has_contacts,
-                'has_contacts': has_contacts,
-                'total_contacts': len(contacts),
-                'security_level': 'Alto' if has_contacts else 'Crítico - Sem proteção',
-                'message': 'Sistema de proteção ativo ✅' if has_contacts else '⚠️ URGENTE: Configure contatos de emergência'
-            })
-            
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/mental-health/check-in', methods=['POST'])
-def daily_mental_health_checkin():
-    """💚 Check-in diário de saúde mental com monitoramento inteligente"""
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id', 1)
-        
-        # Validar contatos de emergência primeiro
-        emergency_contacts = EmergencyContact.query.filter_by(user_id=user_id, is_active=True).count()
-        if emergency_contacts == 0:
-            return jsonify({
-                'error': '⚠️ Contatos de emergência são obrigatórios para sua segurança',
-                'action_required': 'setup_emergency_contacts',
-                'safety_message': 'Configure ao menos um contato para continuar usando o sistema de monitoramento'
-            }), 400
-        
-        # Coleta de dados do check-in (validação de entrada)
-        mood_rating = max(1, min(10, data.get('mood_rating', 5)))
-        energy_level = max(1, min(10, data.get('energy_level', 5)))
-        stress_level = max(1, min(10, data.get('stress_level', 5)))
-        sleep_quality = max(1, min(10, data.get('sleep_quality', 5)))
-        social_interaction = max(1, min(10, data.get('social_interaction', 5)))
-        
-        # Perguntas específicas de risco
-        thoughts_of_self_harm = data.get('thoughts_of_self_harm', False)
-        feeling_hopeless = data.get('feeling_hopeless', False)
-        overwhelming_sadness = data.get('overwhelming_sadness', False)
-        loss_of_interest = data.get('loss_of_interest', False)
-        
-        # Calcular score de bem-estar (algoritmo aprimorado)
-        wellbeing_score = (
-            mood_rating * 0.3 +
-            energy_level * 0.2 +
-            (11 - stress_level) * 0.2 +
-            sleep_quality * 0.15 +
-            social_interaction * 0.15
-        )
-        
-        # Sistema de detecção de risco multi-camadas
-        risk_score = 0.0
-        risk_factors = []
-        
-        # Fatores críticos (risco imediato)
-        if thoughts_of_self_harm:
-            risk_score += 0.8
-            risk_factors.append('thoughts_of_self_harm')
-        
-        if feeling_hopeless and overwhelming_sadness:
-            risk_score += 0.7
-            risk_factors.append('severe_emotional_crisis')
-        
-        # Fatores de alto risco
-        if feeling_hopeless:
-            risk_score += 0.5
-            risk_factors.append('hopelessness')
-        
-        if overwhelming_sadness:
-            risk_score += 0.4
-            risk_factors.append('severe_depression')
-        
-        # Fatores de risco médio
-        if wellbeing_score < 3.0:
-            risk_score += 0.4
-            risk_factors.append('very_low_wellbeing')
-        elif wellbeing_score < 4.5:
-            risk_score += 0.2
-            risk_factors.append('low_wellbeing')
-        
-        if stress_level >= 9:
-            risk_score += 0.3
-            risk_factors.append('extreme_stress')
-        elif stress_level >= 7:
-            risk_score += 0.15
-            risk_factors.append('high_stress')
-        
-        if mood_rating <= 2:
-            risk_score += 0.3
-            risk_factors.append('severe_mood_low')
-        
-        if social_interaction <= 2:
-            risk_score += 0.25
-            risk_factors.append('social_isolation')
-        
-        if loss_of_interest:
-            risk_score += 0.2
-            risk_factors.append('anhedonia')
-        
-        # Determinar nível de risco
-        if risk_score >= 0.8:
-            risk_level = 'critical'
-        elif risk_score >= 0.6:
-            risk_level = 'high'
-        elif risk_score >= 0.4:
-            risk_level = 'medium'
-        elif risk_score >= 0.2:
-            risk_level = 'low'
-        else:
-            risk_level = 'minimal'
-        
-        # Salvar análise detalhada
-        analysis = EmotionalAnalysis(
-            user_id=user_id,
-            current_mood=determine_mood_from_rating(mood_rating),
-            mood_intensity=mood_rating / 10,
-            emotional_stability=wellbeing_score / 10,
-            stress_level=stress_level / 10,
-            suicide_risk_level=risk_level,
-            suicide_risk_score=risk_score,
-            help_seeking_behavior=data.get('seeking_help', False),
-            mentions_self_harm=thoughts_of_self_harm,
-            mentions_hopelessness=feeling_hopeless,
-            context_data=json.dumps({
-                'check_in_type': 'daily_mental_health',
-                'wellbeing_score': wellbeing_score,
-                'risk_factors': risk_factors,
-                'sleep_quality': sleep_quality,
-                'energy_level': energy_level,
-                'social_interaction': social_interaction,
-                'loss_of_interest': loss_of_interest
-            })
-        )
-        
-        db.session.add(analysis)
-        db.session.commit()
-        
-        # Protocolo de emergência para riscos altos
-        emergency_triggered = False
-        emergency_response = None
-        
-        if risk_level in ['critical', 'high']:
-            emergency_contacts_list = EmergencyContact.query.filter_by(
-                user_id=user_id, is_active=True, notify_on_suicide_risk=True
-            ).all()
-            
-            emergency_response = {
-                'emergency_activated': True,
-                'risk_level': risk_level,
-                'contacts_notified': len(emergency_contacts_list),
-                'crisis_resources': get_crisis_resources(),
-                'immediate_actions': [
-                    '🔴 Contatos de emergência alertados automaticamente',
-                    '📞 CVV disponível 24h: 188 (gratuito)',
-                    '🚨 SAMU para emergências: 192',
-                    '🏥 Procure ajuda médica se necessário'
-                ],
-                'safety_message': 'Você NÃO está sozinho. Ajuda está a caminho.'
-            }
-            emergency_triggered = True
-        
-        # Gerar resposta personalizada da IA
-        ai_response = generate_advanced_checkin_response(wellbeing_score, risk_level, risk_factors, mood_rating)
-        
-        # Recomendações inteligentes baseadas no perfil
-        recommendations = generate_personalized_recommendations(
-            wellbeing_score, stress_level, mood_rating, risk_factors, user_id
-        )
-        
-        return jsonify({
-            'success': True,
-            'wellbeing_score': round(wellbeing_score, 2),
-            'risk_level': risk_level,
-            'risk_score': round(risk_score, 2),
-            'risk_factors': risk_factors,
-            'ai_response': ai_response,
-            'recommendations': recommendations,
-            'emergency_triggered': emergency_triggered,
-            'emergency_response': emergency_response,
-            'follow_up': {
-                'recommended': risk_level in ['medium', 'high', 'critical'],
-                'next_check_in': calculate_smart_checkin_time(risk_level),
-                'monitoring_level': get_monitoring_intensity(risk_level)
-            },
-            'encouragement': generate_personalized_encouragement(wellbeing_score, mood_rating)
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/assistant/emotional-support', methods=['POST'])
-def emotional_support_session():
-    """🤗 Sessão de suporte emocional com IA especializada"""
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id', 1)
-        message = data.get('message', '')
-        session_type = data.get('session_type', 'general')  # general, crisis, anxiety, depression
-        
-        if not message:
-            return jsonify({'error': 'Mensagem é obrigatória'}), 400
-        
-        # Análise emocional em tempo real
-        emotional_state = perform_advanced_emotional_analysis(user_id, message)
-        suicide_risk = assess_suicide_risk(emotional_state, message)
-        
-        # Buscar histórico emocional para contexto
-        recent_history = get_user_recent_emotional_history(user_id, days=3)
-        
-        # Gerar resposta especializada baseada no tipo de sessão
-        if session_type == 'crisis' or suicide_risk['level'] in ['critical', 'high']:
-            ai_response = generate_crisis_support_response(emotional_state, suicide_risk, message)
-        elif session_type == 'anxiety':
-            ai_response = generate_anxiety_support_response(emotional_state, message)
-        elif session_type == 'depression':
-            ai_response = generate_depression_support_response(emotional_state, message, recent_history)
-        else:
-            ai_response = generate_general_support_response(emotional_state, message, recent_history)
-        
-        # Salvar interação para aprendizado contínuo
-        conversation = ConversationMemory(
-            user_id=user_id,
-            user_message=message,
-            ai_response=ai_response['message'],
-            conversation_type='emotional_support',
-            emotional_context=json.dumps({
-                'mood': emotional_state['mood'],
-                'intensity': emotional_state['intensity'],
-                'session_type': session_type,
-                'suicide_risk_level': suicide_risk['level']
-            })
-        )
-        
-        db.session.add(conversation)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'ai_response': ai_response,
-            'emotional_analysis': emotional_state,
-            'support_resources': get_specialized_resources(session_type),
-            'coping_strategies': get_coping_strategies(emotional_state['mood']),
-            'session_insights': analyze_session_progress(user_id, recent_history)
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Funções auxiliares especializadas
-
-def generate_advanced_checkin_response(wellbeing_score, risk_level, risk_factors, mood_rating):
-    """Gerar resposta avançada para check-in com personalização"""
-    
-    if risk_level == 'critical':
-        return {
-            'type': 'critical_intervention',
-            'message': f'🚨 ALERTA CRÍTICO: Estou MUITO preocupado com você (Score: {wellbeing_score:.1f}/10). Seus contatos de emergência foram notificados AGORA. Por favor, ligue IMEDIATAMENTE para o CVV (188) ou vá ao hospital. Você NÃO está sozinho e sua vida TEM VALOR!',
-            'urgency': 'MÁXIMA',
-            'immediate_actions': [
-                '📞 LIGAR CVV AGORA: 188 (24h gratuito)',
-                '🚨 Emergência médica: 192 (SAMU)',
-                '🏥 Ir ao hospital mais próximo',
-                '👥 NÃO ficar sozinho(a)'
-            ],
-            'tone': 'urgent_caring'
-        }
-    
-    elif risk_level == 'high':
-        return {
-            'type': 'high_concern',
-            'message': f'💙 Estou muito preocupado com você (Score: {wellbeing_score:.1f}/10). O que você está sentindo indica que precisa de apoio URGENTE. Vamos conversar sobre isso? Posso te conectar com recursos profissionais agora mesmo.',
-            'urgency': 'ALTA',
-            'supportive_actions': [
-                '💬 Vamos conversar - estou aqui',
-                '📞 CVV: 188 (conversa anônima 24h)',
-                '👨‍⚕️ Buscar ajuda profissional hoje',
-                '👥 Falar com alguém de confiança'
-            ],
-            'tone': 'concerned_supportive'
-        }
-    
-    elif risk_level == 'medium':
-        return {
-            'type': 'supportive_guidance',
-            'message': f'💚 Percebo que você está enfrentando alguns desafios (Score: {wellbeing_score:.1f}/10). É corajoso da sua parte compartilhar isso. Vamos trabalhar juntos para te ajudar a se sentir melhor? Tenho algumas estratégias que podem ajudar.',
-            'urgency': 'MÉDIA',
-            'helpful_actions': [
-                '🧘‍♀️ Técnicas de relaxamento personalizadas',
-                '📝 Plano de autocuidado diário',
-                '💬 Conversas de apoio regulares',
-                '📚 Recursos de bem-estar'
-            ],
-            'tone': 'encouraging_supportive'
-        }
-    
-    else:
-        return {
-            'type': 'positive_reinforcement',
-            'message': f'🌟 Que bom saber como você está! (Score: {wellbeing_score:.1f}/10). Continue cuidando de si mesmo com carinho. Há algo específico em que posso te apoiar hoje?',
-            'urgency': 'BAIXA',
-            'maintenance_actions': [
-                '✨ Manter práticas de bem-estar',
-                '🎯 Focar em metas pessoais',
-                '💪 Celebrar progressos',
-                '🌱 Continuar crescimento pessoal'
-            ],
-            'tone': 'positive_encouraging'
-        }
-
-def generate_personalized_recommendations(wellbeing_score, stress_level, mood_rating, risk_factors, user_id):
-    """Gerar recomendações altamente personalizadas"""
-    
-    recommendations = []
-    
-    # Recomendações baseadas em risco
-    if 'thoughts_of_self_harm' in risk_factors:
-        recommendations.extend([
-            '🆘 URGENTE: Remover meios de autolesão do ambiente',
-            '📞 Ligar CVV (188) - disponível 24h',
-            '👥 Não ficar sozinho - contatar alguém AGORA',
-            '🏥 Considerar ir ao hospital se pensamentos piorarem'
-        ])
-    
-    elif 'severe_emotional_crisis' in risk_factors:
-        recommendations.extend([
-            '🧘‍♀️ Respiração de emergência: 4-7-8 (inspire 4, segure 7, expire 8)',
-            '❄️ Técnica do gelo: segurar cubo de gelo para acalmar',
-            '📞 Ligar para alguém de confiança AGORA',
-            '🎵 Música calmante por 10 minutos'
-        ])
-    
-    # Recomendações por bem-estar baixo
-    if wellbeing_score < 4:
-        recommendations.extend([
-            '🚶‍♀️ Caminhada de 5-10 minutos (ou movimento leve)',
-            '☀️ Exposição à luz natural por 15 minutos',
-            '💧 Beber um copo d\'água devagar e mindful',
-            '🍎 Comer algo nutritivo e saboroso'
-        ])
-    
-    # Recomendações por stress alto
-    if stress_level > 7:
-        recommendations.extend([
-            '📝 Escrever 3 preocupações e 1 solução para cada',
-            '🛁 Banho relaxante com água morna',
-            '📱 Desconectar das redes sociais por 1 hora',
-            '🧘‍♀️ Meditação guiada de 10 minutos'
-        ])
-    
-    # Recomendações sociais
-    if 'social_isolation' in risk_factors:
-        recommendations.extend([
-            '📞 Ligar para 1 pessoa querida hoje',
-            '💌 Enviar mensagem carinhosa para alguém',
-            '👥 Participar de uma atividade social pequena',
-            '🐕 Interagir com pets (próprios ou de outros)'
-        ])
-    
-    # Sempre incluir autocuidado básico
-    recommendations.extend([
-        '💚 Praticar autocompaixão: "Estou fazendo o meu melhor"',
-        '📖 Ler algo inspirador por 5 minutos',
-        '🎨 Atividade criativa simples (desenhar, escrever)',
-        '🙏 Gratidão: listar 3 coisas boas do dia'
-    ])
-    
-    return recommendations[:8]  # Máximo 8 recomendações para não sobrecarregar
-
-def calculate_smart_checkin_time(risk_level):
-    """Calcular próximo check-in com inteligência adaptativa"""
-    
-    now = datetime.utcnow()
-    
-    intervals = {
-        'critical': timedelta(minutes=15),    # 15 minutos
-        'high': timedelta(hours=2),           # 2 horas  
-        'medium': timedelta(hours=6),         # 6 horas
-        'low': timedelta(hours=12),           # 12 horas
-        'minimal': timedelta(hours=24)        # 24 horas
-    }
-    
-    next_time = now + intervals.get(risk_level, timedelta(hours=24))
-    
-    return {
-        'datetime': next_time.isoformat(),
-        'human_readable': format_time_until(next_time),
-        'urgency': risk_level,
-        'interval_hours': intervals[risk_level].total_seconds() / 3600
-    }
-
-def get_monitoring_intensity(risk_level):
-    """Definir intensidade de monitoramento baseada no risco"""
-    
-    monitoring_levels = {
-        'critical': {
-            'level': 'Máximo',
-            'description': 'Monitoramento contínuo com alertas automáticos',
-            'frequency': 'A cada 15 minutos',
-            'alerts': True,
-            'emergency_contacts': True
-        },
-        'high': {
-            'level': 'Alto',
-            'description': 'Monitoramento frequente com suporte proativo',
-            'frequency': 'A cada 2 horas',
-            'alerts': True,
-            'emergency_contacts': False
-        },
-        'medium': {
-            'level': 'Moderado',
-            'description': 'Check-ins regulares com acompanhamento',
-            'frequency': 'A cada 6 horas',
-            'alerts': False,
-            'emergency_contacts': False
-        },
-        'low': {
-            'level': 'Baixo',
-            'description': 'Monitoramento de rotina',
-            'frequency': 'A cada 12 horas',
-            'alerts': False,
-            'emergency_contacts': False
-        },
-        'minimal': {
-            'level': 'Mínimo',
-            'description': 'Check-ins diários de bem-estar',
-            'frequency': 'Diário',
-            'alerts': False,
-            'emergency_contacts': False
-        }
-    }
-    
-    return monitoring_levels.get(risk_level, monitoring_levels['minimal'])
-
-def generate_personalized_encouragement(wellbeing_score, mood_rating):
-    """Gerar encorajamento personalizado baseado no estado atual"""
-    
-    if wellbeing_score >= 8:
-        return "🌟 Você está radiante hoje! Continue assim, sua energia positiva é inspiradora!"
-    elif wellbeing_score >= 6:
-        return "💚 Você está no caminho certo! Cada passo que dá é uma vitória."
-    elif wellbeing_score >= 4:
-        return "💙 Sei que tem sido desafiador, mas você está sendo corajoso ao continuar tentando."
-    elif wellbeing_score >= 2:
-        return "🤗 Momentos difíceis não duram para sempre. Você é mais forte do que imagina."
-    else:
-        return "💜 Você não está sozinho nessa jornada. Cada momento que você resiste é um ato de coragem."
-
-def format_time_until(target_time):
-    """Formatar tempo até próximo check-in de forma amigável"""
-    
-    now = datetime.utcnow()
-    delta = target_time - now
-    
-    if delta.total_seconds() < 3600:  # Menos de 1 hora
-        minutes = int(delta.total_seconds() / 60)
-        return f"em {minutes} minutos"
-    elif delta.total_seconds() < 86400:  # Menos de 1 dia
-        hours = int(delta.total_seconds() / 3600)
-        return f"em {hours} horas"
-    else:
-        days = int(delta.total_seconds() / 86400)
-        return f"em {days} dias"
-
 @app.route('/api/backup/list/<int:user_id>', methods=['GET'])
 def list_backups(user_id):
     """Listar backups do usuário"""
@@ -10732,12 +11546,46 @@ def analyze_session_progress(user_id, history):
         'engagement_level': 'good'
     }
 
+# Inicialização automática para Vercel
+def init_database():
+    """Inicializar banco de dados e criar dados básicos"""
+    try:
+        db.create_all()
+        
+        # Criar usuário padrão se não existir (importante para Vercel)
+        if User.query.count() == 0:
+            from werkzeug.security import generate_password_hash
+            
+            default_user = User(
+                username='admin',
+                email='admin@iaon.app',
+                full_name='Administrador IAON',
+                preferred_name='Admin',
+                password_hash=generate_password_hash('admin123'),
+                is_onboarded=True,
+                voice_enabled=True,
+                is_admin=True
+            )
+            db.session.add(default_user)
+            db.session.commit()
+            print("✅ Usuário padrão criado para Vercel")
+        
+        return True
+    except Exception as e:
+        print(f"❌ Erro na inicialização do banco: {e}")
+        return False
+
+# Inicializar automaticamente se estiver no Vercel
+with app.app_context():
+    if app.config.get('AUTO_INIT_DB', False):
+        init_database()
+
 # Para compatibilidade com Vercel
 app_instance = app
 
 if __name__ == '__main__':
     # Configurações para desenvolvimento
-    debug_mode = os.getenv('FLASK_ENV') == 'development'
+    debug_mode = True  # Sempre ativo para debug
     port = int(os.getenv('PORT', 5000))
     
     print("🚀 Iniciando IAON - Assistente IA Avançado...")

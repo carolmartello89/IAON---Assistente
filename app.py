@@ -13,6 +13,7 @@ from sqlalchemy import or_
 import time
 import uuid
 from datetime import datetime, timedelta
+# from subscription_system import create_subscription_routes  # Comentado temporariamente
 
 # Criar instância única do SQLAlchemy
 db = SQLAlchemy()
@@ -34,17 +35,20 @@ CORS(app,
      supports_credentials=True)
 
 # Configuração do banco de dados
-# Detectar ambiente Vercel
-is_vercel = os.getenv('VERCEL') == '1'
-is_production = os.getenv('FLASK_ENV') == 'production' or is_vercel
+# Detectar ambiente Railway
+is_railway = os.getenv('RAILWAY_ENVIRONMENT') is not None
+database_url = os.getenv('DATABASE_URL')
 
-if is_vercel:
-    # Para Vercel, usar PostgreSQL ou banco persistente
-    # Como fallback, usar SQLite em memória mas com inicialização garantida
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+if is_railway and database_url:
+    # Railway com PostgreSQL
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    app.config['AUTO_INIT_DB'] = True
+elif database_url:
+    # Qualquer ambiente com DATABASE_URL
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['AUTO_INIT_DB'] = True
 else:
-    # Banco de dados em arquivo para desenvolvimento local
+    # Desenvolvimento local com SQLite
     database_path = os.path.join(os.path.dirname(__file__), 'database', 'iaon.db')
     os.makedirs(os.path.dirname(database_path), exist_ok=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path}"
@@ -59,22 +63,23 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 # Inicializar banco de dados
 db.init_app(app)
 
-# Middleware para Vercel
+# Middleware para Railway
 @app.before_request
 def before_request():
-    """Middleware para lidar com problemas específicos do Vercel"""
+    """Middleware para inicialização do banco em Railway"""
     # Garantir que o banco está inicializado
-    if app.config.get('AUTO_INIT_DB', False) and hasattr(app, '_db_initialized') == False:
+    if app.config.get('AUTO_INIT_DB', False) and not hasattr(app, '_db_initialized'):
         with app.app_context():
             try:
                 db.create_all()
                 app._db_initialized = True
+                print("✅ Banco de dados inicializado com sucesso")
             except Exception as e:
-                print(f"Erro na inicialização do banco: {e}")
+                print(f"❌ Erro na inicialização do banco: {e}")
 
 @app.after_request
 def after_request(response):
-    """Configurar headers para compatibilidade com Vercel"""
+    """Configurar headers CORS"""
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
@@ -2858,22 +2863,6 @@ def init_sample_coupons():
 # Inicializar apenas se não estiver em ambiente serverless
 if os.getenv('FLASK_ENV') != 'production':
     init_database()
-
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """Endpoint de verificação de saúde da aplicação"""
-    return jsonify({
-        'status': 'healthy',
-        'app': 'IAON - Assistente IA Avançado',
-        'version': '1.0.0',
-        'timestamp': datetime.utcnow().isoformat(),
-        'services': {
-            'database': 'connected',
-            'ai': 'available',
-            'voice_biometry': 'enabled',
-            'pwa': 'active'
-        }
-    })
 
 # ===============================
 # AUTHENTICATION ENDPOINTS
@@ -7821,24 +7810,35 @@ def test():
 # ==================== HEALTH CHECK E ROTAS PRINCIPAIS ====================
 
 @app.route('/health')
+@app.route('/api/health')
 def health_check():
-    """Endpoint de verificação de saúde para Vercel"""
+    """Endpoint de verificação de saúde para Railway"""
     try:
         # Verificar conexão com banco
         user_count = User.query.count()
         
         return jsonify({
             'status': 'healthy',
-            'environment': 'vercel' if os.getenv('VERCEL') == '1' else 'local',
-            'database': 'connected',
-            'users_count': user_count,
-            'timestamp': datetime.utcnow().isoformat()
+            'app': 'IAON - Assistente IA Avançado',
+            'version': '1.0.0',
+            'environment': 'railway' if os.getenv('RAILWAY_ENVIRONMENT') else 'development',
+            'timestamp': datetime.utcnow().isoformat(),
+            'database': {
+                'status': 'connected',
+                'users_count': user_count,
+                'type': 'postgresql' if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite'
+            },
+            'services': {
+                'flask': '✅ OK',
+                'cors': '✅ OK',
+                'database': '✅ OK'
+            }
         })
     except Exception as e:
         return jsonify({
             'status': 'error',
             'error': str(e),
-            'environment': 'vercel' if os.getenv('VERCEL') == '1' else 'local',
+            'environment': 'railway' if os.getenv('RAILWAY_ENVIRONMENT') else 'development',
             'timestamp': datetime.utcnow().isoformat()
         }), 500
 
@@ -11579,6 +11579,37 @@ def init_database():
 with app.app_context():
     if app.config.get('AUTO_INIT_DB', False):
         init_database()
+
+# Inicializar sistema de assinatura e comercialização
+try:
+    from subscription_system import create_subscription_routes
+    create_subscription_routes(app, db)
+except ImportError:
+    print("⚠️ Sistema de assinatura não carregado - modo desenvolvimento")
+
+# ==========================================
+# ROTAS ESSENCIAIS PARA RAILWAY
+# ==========================================
+
+@app.route('/')
+def home():
+    """Página inicial"""
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/api/status')
+def api_status():
+    """Status da API"""
+    return jsonify({
+        'api': 'online',
+        'version': '1.0.0',
+        'features': [
+            'voice_biometry',
+            'meeting_transcription', 
+            'intelligent_reports',
+            'financial_control',
+            'medical_system'
+        ]
+    })
 
 # Para compatibilidade com Vercel
 app_instance = app

@@ -12,10 +12,18 @@ if __name__ == "__main__":
     host = "0.0.0.0"  # Railway requer bind em todas as interfaces
     
     print(f"🚀 Iniciando aplicação IAON na porta {port}")
-    print(f"📡 Ambiente: {'Railway' if 'RAILWAY_ENVIRONMENT' in os.environ else 'Local'}")
+    # Detectar ambiente de produção
+    is_production = any([
+        'RAILWAY_ENVIRONMENT' in os.environ,
+        'RENDER' in os.environ,
+        'HEROKU_APP_NAME' in os.environ
+    ])
     
-    # No Railway, usar configuração de produção
-    if 'RAILWAY_ENVIRONMENT' in os.environ:
+    ambiente = 'Produção' if is_production else 'Local'
+    print(f"📡 Ambiente: {ambiente}")
+    
+    # Em produção, usar configuração otimizada
+    if is_production:
         app.run(host=host, port=port, debug=False, threaded=True)
     else:
         # Desenvolvimento local

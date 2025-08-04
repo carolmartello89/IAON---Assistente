@@ -356,6 +356,9 @@ class IAON {
             case 'meetings':
                 await this.loadMeetingsData();
                 break;
+            case 'participants':
+                await this.loadParticipantsData();
+                break;
             default:
                 // No specific data loading needed
                 break;
@@ -424,6 +427,18 @@ class IAON {
             }
         } catch (error) {
             console.error('Error loading meetings data:', error);
+        }
+    }
+
+    async loadParticipantsData() {
+        try {
+            // Inicializar busca
+            searchParticipants();
+
+            // Carregar participantes
+            loadParticipants();
+        } catch (error) {
+            console.error('Error loading participants data:', error);
         }
     }
 
@@ -2683,4 +2698,303 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+// ==================== FUNÇÕES GLOBAIS PARA GERENCIAR PARTICIPANTES ====================
+
+// Variável global para filtro atual
+let currentParticipantFilter = 'all';
+
+// Mostrar modal para adicionar participante
+function showAddParticipantModal() {
+    document.getElementById('modal-title').textContent = 'Novo Participante';
+    document.getElementById('edit-participant-id').value = '';
+    document.getElementById('participant-form').reset();
+    document.getElementById('participant-modal').classList.remove('hidden');
+}
+
+// Fechar modal de participante
+function closeParticipantModal() {
+    document.getElementById('participant-modal').classList.add('hidden');
+}
+
+// Editar participante
+function editParticipant(participantId) {
+    fetch(`/api/known-participants/${participantId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                document.getElementById('modal-title').textContent = 'Editar Participante';
+                document.getElementById('edit-participant-id').value = data.id;
+                document.getElementById('participant-name').value = data.name || '';
+                document.getElementById('participant-email').value = data.email || '';
+                document.getElementById('participant-phone').value = data.phone || '';
+                document.getElementById('participant-company').value = data.company || '';
+                document.getElementById('participant-position').value = data.position || '';
+                document.getElementById('participant-role').value = data.default_role || 'participante';
+                document.getElementById('participant-notes').value = data.notes || '';
+                document.getElementById('participant-modal').classList.remove('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar participante:', error);
+            iaon.showMessage('Erro ao carregar dados do participante', 'error');
+        });
+}
+
+// Salvar participante
+function saveParticipant(event) {
+    event.preventDefault();
+
+    const participantId = document.getElementById('edit-participant-id').value;
+    const isEdit = participantId !== '';
+
+    const data = {
+        name: document.getElementById('participant-name').value,
+        email: document.getElementById('participant-email').value,
+        phone: document.getElementById('participant-phone').value,
+        company: document.getElementById('participant-company').value,
+        position: document.getElementById('participant-position').value,
+        default_role: document.getElementById('participant-role').value,
+        notes: document.getElementById('participant-notes').value
+    };
+
+    const url = isEdit ? `/api/known-participants/${participantId}` : '/api/known-participants';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => response.json())
+        .then(result => {
+            if (result.participant || result.message) {
+                iaon.showMessage(result.message || (isEdit ? 'Participante atualizado!' : 'Participante adicionado!'), 'success');
+                closeParticipantModal();
+                loadParticipants();
+            } else {
+                iaon.showMessage(result.error || 'Erro ao salvar participante', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao salvar participante:', error);
+            iaon.showMessage('Erro na conexão', 'error');
+        });
+}
+
+// Excluir participante
+function deleteParticipant(participantId, participantName) {
+    if (confirm(`Tem certeza que deseja excluir o participante "${participantName}"?`)) {
+        fetch(`/api/known-participants/${participantId}`, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.message) {
+                    iaon.showMessage(result.message, 'success');
+                    loadParticipants();
+                } else {
+                    iaon.showMessage(result.error || 'Erro ao excluir participante', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao excluir participante:', error);
+                iaon.showMessage('Erro na conexão', 'error');
+            });
+    }
+}
+
+// Carregar lista de participantes
+function loadParticipants() {
+    fetch('/api/known-participants')
+        .then(response => response.json())
+        .then(data => {
+            if (data.participants) {
+                displayParticipants(data.participants);
+                updateParticipantsCount(data.total);
+            } else {
+                iaon.showMessage(data.error || 'Erro ao carregar participantes', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar participantes:', error);
+            document.getElementById('participants-list').innerHTML = `
+                <div class="p-8 text-center text-red-500">
+                    <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-4"></i>
+                    <p>Erro ao carregar participantes</p>
+                </div>
+            `;
+        });
+}
+
+// Exibir participantes na lista
+function displayParticipants(participants) {
+    const container = document.getElementById('participants-list');
+
+    if (participants.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center text-gray-500">
+                <i data-lucide="users" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                <p class="text-lg font-medium mb-2">Nenhum participante encontrado</p>
+                <p class="text-sm">Adicione participantes para começar a usar o sistema de memória inteligente</p>
+                <button onclick="showAddParticipantModal()" 
+                        class="mt-4 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                    Adicionar Primeiro Participante
+                </button>
+            </div>
+        `;
+        lucide.createIcons();
+        return;
+    }
+
+    // Filtrar participantes baseado no filtro atual
+    let filteredParticipants = participants;
+    if (currentParticipantFilter === 'frequent') {
+        filteredParticipants = participants.filter(p => p.is_frequent);
+    } else if (currentParticipantFilter === 'recent') {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        filteredParticipants = participants.filter(p =>
+            p.last_meeting_date && new Date(p.last_meeting_date) > thirtyDaysAgo
+        );
+    }
+
+    container.innerHTML = filteredParticipants.map(participant => `
+        <div class="p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <h4 class="font-medium text-gray-900">${participant.name}</h4>
+                        ${participant.is_frequent ? '<span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Frequente</span>' : ''}
+                        <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">${participant.default_role}</span>
+                    </div>
+                    <div class="text-sm text-gray-600 space-y-1">
+                        ${participant.email ? `<div class="flex items-center gap-2"><i data-lucide="mail" class="w-3 h-3"></i>${participant.email}</div>` : ''}
+                        ${participant.phone ? `<div class="flex items-center gap-2"><i data-lucide="phone" class="w-3 h-3"></i>${participant.phone}</div>` : ''}
+                        ${participant.company ? `<div class="flex items-center gap-2"><i data-lucide="building" class="w-3 h-3"></i>${participant.company}${participant.position ? ` - ${participant.position}` : ''}</div>` : ''}
+                        <div class="flex items-center gap-4 mt-2">
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="calendar" class="w-3 h-3"></i>
+                                ${participant.meeting_count} reuniões
+                            </span>
+                            ${participant.last_meeting_date ? `
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="clock" class="w-3 h-3"></i>
+                                    ${new Date(participant.last_meeting_date).toLocaleDateString('pt-BR')}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ${participant.notes ? `<div class="text-sm text-gray-500 mt-2 italic">${participant.notes}</div>` : ''}
+                </div>
+                <div class="flex items-center gap-2 ml-4">
+                    <button onclick="editParticipant(${participant.id})"
+                            class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar">
+                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="deleteParticipant(${participant.id}, '${participant.name}')"
+                            class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Excluir">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                    ${iaon.currentMeeting ? `
+                        <button onclick="addParticipantToCurrentMeeting(${participant.id})"
+                                class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Adicionar à reunião atual">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Recrear ícones
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+// Atualizar contador de participantes
+function updateParticipantsCount(total) {
+    const countElement = document.getElementById('participants-count');
+    if (countElement) {
+        countElement.textContent = `${total} participante${total !== 1 ? 's' : ''} cadastrado${total !== 1 ? 's' : ''}`;
+    }
+}
+
+// Filtrar participantes
+function filterParticipants(filter) {
+    currentParticipantFilter = filter;
+
+    // Atualizar botões de filtro
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-gray-200', 'border-gray-400');
+        btn.classList.add('bg-gray-100', 'border-gray-300');
+    });
+
+    const activeBtn = document.querySelector(`[onclick="filterParticipants('${filter}')"]`);
+    if (activeBtn) {
+        activeBtn.classList.remove('bg-gray-100', 'border-gray-300');
+        activeBtn.classList.add('active', 'bg-gray-200', 'border-gray-400');
+    }
+
+    // Recarregar lista com filtro
+    loadParticipants();
+}
+
+// Adicionar participante à reunião atual
+function addParticipantToCurrentMeeting(participantId) {
+    if (!iaon.currentMeeting) {
+        iaon.showMessage('Nenhuma reunião ativa', 'warning');
+        return;
+    }
+
+    fetch(`/api/meetings/${iaon.currentMeeting.id}/add-participant`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            known_participant_id: participantId
+        })
+    })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                iaon.meetingParticipants.push(result.participant);
+                iaon.updateParticipantsList();
+                iaon.showMessage(result.message, 'success');
+
+                if (result.is_frequent) {
+                    iaon.showMessage(`⭐ Participante frequente adicionado! (${result.meeting_count} reuniões)`, 'info');
+                }
+            } else {
+                iaon.showMessage(result.error || 'Erro ao adicionar participante', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao adicionar participante à reunião:', error);
+            iaon.showMessage('Erro na conexão', 'error');
+        });
+}
+
+// Buscar participantes
+function searchParticipants() {
+    const searchInput = document.getElementById('participant-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const participantItems = document.querySelectorAll('#participants-list > div');
+
+            participantItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+    }
+}
 

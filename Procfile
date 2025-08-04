@@ -1,2 +1,1 @@
 web: python main.py
-release: python -c "from app import db; db.create_all()"

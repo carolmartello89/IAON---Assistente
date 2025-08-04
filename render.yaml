@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: iaon-assistente
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: AUTO_INIT_DB
+        value: true
+databases:
+  - name: iaon-db
+    databaseName: iaon
+    user: iaon_user
